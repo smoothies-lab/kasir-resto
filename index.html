@@ -13,7 +13,6 @@
     .tombol-keluar { background: rgba(255,255,255,.18); color: #fff; border: 0; border-radius: 12px; padding: 10px 14px; font: inherit; font-weight: 700; cursor: pointer; }
     .tersembunyi { display: none !important; }
 
-    /* Halaman login */
     #halaman-login { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 16px; }
     .kotak-login { background: #fff; width: 100%; max-width: 360px; border-radius: 24px; padding: 28px 24px; box-shadow: 0 10px 30px rgba(29,38,64,.08); }
     .kotak-login h1 { margin: 0 0 4px; font-size: 24px; }
@@ -22,7 +21,6 @@
     .kotak-login input { width: 100%; height: 46px; border: 1px solid #E4E8F2; border-radius: 12px; padding: 0 14px; font: inherit; font-size: 15px; }
     #pesan-login { color: #C2410C; font-size: 13px; min-height: 18px; margin-top: 10px; }
 
-    /* Halaman kasir */
     #halaman-kasir { padding-bottom: 90px; }
     .wadah { display: grid; grid-template-columns: 1fr; gap: 16px; padding: 16px; max-width: 1100px; margin: 0 auto; }
     h2 { font-size: 16px; margin: 18px 0 10px; }
@@ -36,6 +34,13 @@
     .stok { color: #6B7591; font-size: 12px; margin-top: 4px; }
     aside { background: #fff; border-radius: 20px; padding: 16px; box-shadow: 0 2px 8px rgba(29,38,64,.06); }
     aside h2 { margin-top: 0; }
+
+    .tipe { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; background: #F2F4FA; padding: 4px; border-radius: 12px; margin-bottom: 10px; }
+    .tipe button { border: 0; background: transparent; border-radius: 9px; height: 36px; font: inherit; font-size: 12px; font-weight: 600; color: #6B7591; cursor: pointer; }
+    .tipe button.aktif { background: #4672EC; color: #fff; font-weight: 800; }
+    .pilih-meja label { display: block; font-size: 13px; font-weight: 700; margin-bottom: 6px; }
+    .pilih-meja select { width: 100%; height: 42px; border: 1px solid #E4E8F2; border-radius: 12px; padding: 0 10px; font: inherit; background: #fff; margin-bottom: 6px; }
+
     .item { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px dashed #E4E8F2; }
     .item-info { flex: 1; min-width: 0; }
     .item-nama { font-weight: 700; font-size: 14px; }
@@ -47,7 +52,9 @@
     .ringkas .total { font-size: 18px; font-weight: 800; border-top: 1px solid #E4E8F2; padding-top: 10px; }
     .tombol { width: 100%; margin-top: 14px; height: 48px; border: 0; border-radius: 14px; background: #4672EC; color: #fff; font: inherit; font-weight: 800; font-size: 15px; cursor: pointer; }
     .tombol:disabled { background: #A3B4E8; cursor: not-allowed; }
-    #info { color: #6B7591; font-size: 13px; text-align: center; }
+    #info { font-size: 13px; text-align: center; min-height: 18px; }
+    #info.sukses { color: #15803D; font-weight: 700; }
+    #info.gagal { color: #C2410C; font-weight: 700; }
     .bar-hp { position: fixed; left: 16px; right: 16px; bottom: 16px; display: flex; justify-content: space-between; align-items: center; background: #4672EC; color: #fff; padding: 16px 20px; border-radius: 999px; text-decoration: none; font-weight: 800; box-shadow: 0 10px 24px rgba(70,114,236,.35); }
     #pesan { color: #6B7591; }
     @media (min-width: 800px) {
@@ -92,6 +99,18 @@
 
       <aside id="keranjang">
         <h2>Pesanan</h2>
+
+        <div class="tipe" id="pilih-tipe">
+          <button data-tipe="makan_di_sini" class="aktif">Makan di sini</button>
+          <button data-tipe="bawa_pulang">Bawa pulang</button>
+          <button data-tipe="pesan_antar">Pesan antar</button>
+        </div>
+
+        <div class="pilih-meja" id="bagian-meja">
+          <label for="meja">Meja</label>
+          <select id="meja"><option value="">-- Pilih meja --</option></select>
+        </div>
+
         <div id="isi-keranjang"></div>
         <div class="ringkas">
           <div><span>Subtotal</span><span id="subtotal">Rp0</span></div>
@@ -118,6 +137,7 @@
     const PAJAK = 0.10;
     let semuaProduk = {};
     let keranjang = {};
+    let tipePesanan = 'makan_di_sini';
 
     const rupiah = (n) => 'Rp' + n.toLocaleString('id-ID');
     const $ = (id) => document.getElementById(id);
@@ -127,21 +147,17 @@
       e.preventDefault();
       $('tombol-masuk').disabled = true;
       $('pesan-login').textContent = '';
-
       const { error } = await db.auth.signInWithPassword({
         email: $('email').value.trim(),
         password: $('password').value,
       });
-
       $('tombol-masuk').disabled = false;
       if (error) $('pesan-login').textContent = 'Email atau password salah.';
     };
 
     $('tombol-keluar').onclick = () => db.auth.signOut();
 
-    // Dipanggil otomatis setiap status login berubah
     db.auth.onAuthStateChange((event, session) => {
-      // tunda sedikit agar tidak bentrok dengan proses login Supabase
       setTimeout(() => {
         if (session) bukaKasir(session.user);
         else bukaLogin();
@@ -155,15 +171,12 @@
     }
 
     async function bukaKasir(user) {
-      // Pastikan akun ini terdaftar sebagai staf
       const { data: staf } = await db.from('staf').select('nama, peran').eq('id', user.id).maybeSingle();
-
       if (!staf) {
         $('pesan-login').textContent = 'Akun ini belum terdaftar sebagai staf.';
         await db.auth.signOut();
         return;
       }
-
       $('halaman-login').classList.add('tersembunyi');
       $('halaman-kasir').classList.remove('tersembunyi');
       $('info-staf').textContent = `Masuk sebagai ${staf.nama} (${staf.peran})`;
@@ -171,12 +184,37 @@
       semuaProduk = {};
       keranjang = {};
       $('daftar').innerHTML = '';
+      muatMeja();
       tampilkanMenu();
     }
+
+    // ================= MEJA & TIPE PESANAN =================
+    async function muatMeja() {
+      const { data } = await db.from('meja').select('id, nomor').order('id');
+      const select = $('meja');
+      select.innerHTML = '<option value="">-- Pilih meja --</option>';
+      (data || []).forEach((m) => {
+        const opsi = document.createElement('option');
+        opsi.value = m.id;
+        opsi.textContent = 'Meja ' + m.nomor;
+        select.appendChild(opsi);
+      });
+    }
+
+    document.querySelectorAll('#pilih-tipe button').forEach((tombol) => {
+      tombol.onclick = () => {
+        tipePesanan = tombol.dataset.tipe;
+        document.querySelectorAll('#pilih-tipe button').forEach((b) => b.classList.toggle('aktif', b === tombol));
+        // meja hanya perlu untuk "makan di sini"
+        $('bagian-meja').classList.toggle('tersembunyi', tipePesanan !== 'makan_di_sini');
+      };
+    });
 
     // ================= MENU =================
     async function tampilkanMenu() {
       $('pesan').textContent = 'Memuat menu...';
+      $('daftar').innerHTML = '';
+      semuaProduk = {};
 
       const { data, error } = await db
         .from('kategori')
@@ -197,7 +235,6 @@
 
         const grid = document.createElement('div');
         grid.className = 'grid';
-
         kat.produk.forEach((p) => {
           semuaProduk[p.id] = p;
           const kartu = document.createElement('button');
@@ -212,7 +249,6 @@
           kartu.onclick = () => tambah(p.id);
           grid.appendChild(kartu);
         });
-
         $('daftar').appendChild(grid);
       });
 
@@ -283,8 +319,44 @@
       });
     }
 
-    $('tombol-simpan').onclick = () => {
-      $('info').textContent = 'Fitur simpan ke database menyusul di langkah berikutnya 😉';
+    // ================= SIMPAN PESANAN =================
+    $('tombol-simpan').onclick = async () => {
+      const info = $('info');
+      info.className = '';
+      const mejaId = $('meja').value ? Number($('meja').value) : null;
+
+      if (tipePesanan === 'makan_di_sini' && !mejaId) {
+        info.className = 'gagal';
+        info.textContent = 'Pilih meja dulu ya.';
+        return;
+      }
+
+      const items = Object.keys(keranjang).map((id) => ({
+        produk_id: Number(id),
+        qty: keranjang[id],
+      }));
+
+      $('tombol-simpan').disabled = true;
+      info.textContent = 'Menyimpan...';
+
+      const { data: nomorNota, error } = await db.rpc('simpan_pesanan', {
+        p_meja_id: mejaId,
+        p_tipe: tipePesanan,
+        p_items: items,
+      });
+
+      if (error) {
+        info.className = 'gagal';
+        info.textContent = 'Gagal menyimpan: ' + error.message;
+        $('tombol-simpan').disabled = false;
+        return;
+      }
+
+      info.className = 'sukses';
+      info.textContent = `Pesanan #${nomorNota} tersimpan ✅`;
+      keranjang = {};
+      $('meja').value = '';
+      gambarKeranjang();
     };
   </script>
 </body>
