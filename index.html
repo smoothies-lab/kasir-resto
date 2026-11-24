@@ -13,6 +13,7 @@
     .tombol-keluar { background: rgba(255,255,255,.18); color: #fff; border: 0; border-radius: 12px; padding: 10px 14px; font: inherit; font-weight: 700; cursor: pointer; }
     .tersembunyi { display: none !important; }
 
+    /* Login */
     #halaman-login { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 16px; }
     .kotak-login { background: #fff; width: 100%; max-width: 360px; border-radius: 24px; padding: 28px 24px; box-shadow: 0 10px 30px rgba(29,38,64,.08); }
     .kotak-login h1 { margin: 0 0 4px; font-size: 24px; }
@@ -21,6 +22,12 @@
     .kotak-login input { width: 100%; height: 46px; border: 1px solid #E4E8F2; border-radius: 12px; padding: 0 14px; font: inherit; font-size: 15px; }
     #pesan-login { color: #C2410C; font-size: 13px; min-height: 18px; margin-top: 10px; }
 
+    /* Tab navigasi */
+    .tab { display: flex; gap: 8px; padding: 12px 16px 0; max-width: 1100px; margin: 0 auto; }
+    .tab button { border: 0; background: #fff; color: #6B7591; border-radius: 999px; padding: 10px 16px; font: inherit; font-weight: 700; cursor: pointer; box-shadow: 0 1px 3px rgba(29,38,64,.06); }
+    .tab button.aktif { background: #4672EC; color: #fff; }
+
+    /* Kasir */
     #halaman-kasir { padding-bottom: 90px; }
     .wadah { display: grid; grid-template-columns: 1fr; gap: 16px; padding: 16px; max-width: 1100px; margin: 0 auto; }
     h2 { font-size: 16px; margin: 18px 0 10px; }
@@ -34,13 +41,11 @@
     .stok { color: #6B7591; font-size: 12px; margin-top: 4px; }
     aside { background: #fff; border-radius: 20px; padding: 16px; box-shadow: 0 2px 8px rgba(29,38,64,.06); }
     aside h2 { margin-top: 0; }
-
     .tipe { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; background: #F2F4FA; padding: 4px; border-radius: 12px; margin-bottom: 10px; }
     .tipe button { border: 0; background: transparent; border-radius: 9px; height: 36px; font: inherit; font-size: 12px; font-weight: 600; color: #6B7591; cursor: pointer; }
     .tipe button.aktif { background: #4672EC; color: #fff; font-weight: 800; }
     .pilih-meja label { display: block; font-size: 13px; font-weight: 700; margin-bottom: 6px; }
     .pilih-meja select { width: 100%; height: 42px; border: 1px solid #E4E8F2; border-radius: 12px; padding: 0 10px; font: inherit; background: #fff; margin-bottom: 6px; }
-
     .item { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px dashed #E4E8F2; }
     .item-info { flex: 1; min-width: 0; }
     .item-nama { font-weight: 700; font-size: 14px; }
@@ -52,22 +57,49 @@
     .ringkas .total { font-size: 18px; font-weight: 800; border-top: 1px solid #E4E8F2; padding-top: 10px; }
     .tombol { width: 100%; margin-top: 14px; height: 48px; border: 0; border-radius: 14px; background: #4672EC; color: #fff; font: inherit; font-weight: 800; font-size: 15px; cursor: pointer; }
     .tombol:disabled { background: #A3B4E8; cursor: not-allowed; }
+    .tombol.kedua { background: #F2F4FA; color: #3A4560; }
     #info { font-size: 13px; text-align: center; min-height: 18px; }
-    #info.sukses { color: #15803D; font-weight: 700; }
-    #info.gagal { color: #C2410C; font-weight: 700; }
+    .sukses { color: #15803D; font-weight: 700; }
+    .gagal { color: #C2410C; font-weight: 700; }
     .bar-hp { position: fixed; left: 16px; right: 16px; bottom: 16px; display: flex; justify-content: space-between; align-items: center; background: #4672EC; color: #fff; padding: 16px 20px; border-radius: 999px; text-decoration: none; font-weight: 800; box-shadow: 0 10px 24px rgba(70,114,236,.35); }
     #pesan { color: #6B7591; }
+
+    /* Open bill */
+    .daftar-nota { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; padding: 16px; max-width: 1100px; margin: 0 auto; }
+    .nota { background: #fff; border-radius: 20px; padding: 16px; box-shadow: 0 2px 8px rgba(29,38,64,.06); display: flex; flex-direction: column; gap: 8px; }
+    .nota-atas { display: flex; justify-content: space-between; align-items: baseline; }
+    .nota-judul { font-weight: 800; font-size: 16px; }
+    .nota-waktu { color: #6B7591; font-size: 12px; }
+    .label { align-self: flex-start; font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 999px; background: #E8EEFD; color: #2F57C9; }
+    .nota-isi { font-size: 13px; color: #3A4560; border-top: 1px dashed #E4E8F2; padding-top: 8px; }
+    .nota-isi div { display: flex; justify-content: space-between; margin-top: 4px; }
+    .nota-total { display: flex; justify-content: space-between; font-weight: 800; font-size: 16px; border-top: 1px solid #E4E8F2; padding-top: 8px; }
+
+    /* Jendela bayar */
+    .latar { position: fixed; inset: 0; background: rgba(29,38,64,.45); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 10; }
+    .jendela { background: #fff; width: 100%; max-width: 380px; border-radius: 24px; padding: 22px; }
+    .jendela h2 { margin: 0 0 4px; }
+    .jendela .besar { font-size: 28px; font-weight: 800; margin: 4px 0 14px; }
+    .metode { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; }
+    .metode button { height: 46px; border: 1px solid #E4E8F2; background: #fff; border-radius: 12px; font: inherit; font-weight: 700; color: #3A4560; cursor: pointer; }
+    .metode button.aktif { background: #4672EC; border-color: #4672EC; color: #fff; }
+    .jendela label { display: block; font-size: 13px; font-weight: 700; margin-bottom: 6px; }
+    .jendela input { width: 100%; height: 46px; border: 1px solid #E4E8F2; border-radius: 12px; padding: 0 14px; font: inherit; font-size: 16px; }
+    .kembalian { display: flex; justify-content: space-between; margin-top: 10px; padding: 12px; border-radius: 12px; background: #E8EEFD; color: #2F57C9; font-weight: 800; }
+    .dua-tombol { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    #info-bayar { font-size: 13px; min-height: 18px; margin-top: 8px; }
+
     @media (min-width: 800px) {
       #halaman-kasir { padding-bottom: 0; }
       .wadah { grid-template-columns: 1fr 340px; align-items: start; }
       aside { position: sticky; top: 16px; }
-      .bar-hp { display: none; }
+      .bar-hp { display: none !important; }
     }
   </style>
 </head>
 <body>
 
-  <!-- ================= HALAMAN LOGIN ================= -->
+  <!-- ================= LOGIN ================= -->
   <section id="halaman-login" class="tersembunyi">
     <form class="kotak-login" id="form-login">
       <h1>Kasir Resto</h1>
@@ -81,52 +113,86 @@
     </form>
   </section>
 
-  <!-- ================= HALAMAN KASIR ================= -->
+  <!-- ================= KASIR ================= -->
   <section id="halaman-kasir" class="tersembunyi">
     <header>
       <div>
         <h1>Kasir Resto</h1>
-        <p id="info-staf">Klik menu untuk menambahkan ke pesanan</p>
+        <p id="info-staf"></p>
       </div>
       <button class="tombol-keluar" id="tombol-keluar">Keluar</button>
     </header>
 
-    <div class="wadah">
-      <main>
-        <p id="pesan">Memuat menu...</p>
-        <div id="daftar"></div>
-      </main>
+    <nav class="tab">
+      <button id="tab-pesan" class="aktif">Pesanan baru</button>
+      <button id="tab-openbill">Open bill</button>
+    </nav>
 
-      <aside id="keranjang">
-        <h2>Pesanan</h2>
+    <!-- Tampilan: pesanan baru -->
+    <div id="tampilan-pesan">
+      <div class="wadah">
+        <main>
+          <p id="pesan">Memuat menu...</p>
+          <div id="daftar"></div>
+        </main>
 
-        <div class="tipe" id="pilih-tipe">
-          <button data-tipe="makan_di_sini" class="aktif">Makan di sini</button>
-          <button data-tipe="bawa_pulang">Bawa pulang</button>
-          <button data-tipe="pesan_antar">Pesan antar</button>
-        </div>
+        <aside id="keranjang">
+          <h2>Pesanan</h2>
+          <div class="tipe" id="pilih-tipe">
+            <button data-tipe="makan_di_sini" class="aktif">Makan di sini</button>
+            <button data-tipe="bawa_pulang">Bawa pulang</button>
+            <button data-tipe="pesan_antar">Pesan antar</button>
+          </div>
+          <div class="pilih-meja" id="bagian-meja">
+            <label for="meja">Meja</label>
+            <select id="meja"><option value="">-- Pilih meja --</option></select>
+          </div>
+          <div id="isi-keranjang"></div>
+          <div class="ringkas">
+            <div><span>Subtotal</span><span id="subtotal">Rp0</span></div>
+            <div><span>Pajak (10%)</span><span id="pajak">Rp0</span></div>
+            <div class="total"><span>Total</span><span id="total">Rp0</span></div>
+          </div>
+          <button class="tombol" id="tombol-simpan" disabled>Simpan pesanan</button>
+          <p id="info"></p>
+        </aside>
+      </div>
 
-        <div class="pilih-meja" id="bagian-meja">
-          <label for="meja">Meja</label>
-          <select id="meja"><option value="">-- Pilih meja --</option></select>
-        </div>
-
-        <div id="isi-keranjang"></div>
-        <div class="ringkas">
-          <div><span>Subtotal</span><span id="subtotal">Rp0</span></div>
-          <div><span>Pajak (10%)</span><span id="pajak">Rp0</span></div>
-          <div class="total"><span>Total</span><span id="total">Rp0</span></div>
-        </div>
-        <button class="tombol" id="tombol-simpan" disabled>Simpan pesanan</button>
-        <p id="info"></p>
-      </aside>
+      <a class="bar-hp" id="bar-hp" href="#keranjang">
+        <span id="bar-info">0 item</span>
+        <span id="bar-total">Rp0</span>
+      </a>
     </div>
 
-    <a class="bar-hp" href="#keranjang">
-      <span id="bar-info">0 item</span>
-      <span id="bar-total">Rp0</span>
-    </a>
+    <!-- Tampilan: open bill -->
+    <div id="tampilan-openbill" class="tersembunyi">
+      <p id="pesan-openbill" class="kosong" style="padding: 16px; max-width: 1100px; margin: 0 auto;"></p>
+      <div class="daftar-nota" id="daftar-nota"></div>
+    </div>
   </section>
+
+  <!-- ================= JENDELA BAYAR ================= -->
+  <div class="latar tersembunyi" id="jendela-bayar">
+    <div class="jendela">
+      <h2 id="judul-bayar">Bayar</h2>
+      <div class="besar" id="total-bayar">Rp0</div>
+      <div class="metode" id="pilih-metode">
+        <button data-metode="tunai" class="aktif">Tunai</button>
+        <button data-metode="qris">QRIS</button>
+        <button data-metode="transfer">Transfer</button>
+      </div>
+      <div id="bagian-tunai">
+        <label for="uang">Uang diterima</label>
+        <input id="uang" type="number" inputmode="numeric" placeholder="contoh: 50000">
+        <div class="kembalian"><span>Kembalian</span><span id="kembalian">Rp0</span></div>
+      </div>
+      <div class="dua-tombol">
+        <button class="tombol kedua" id="tombol-batal">Batal</button>
+        <button class="tombol" id="tombol-konfirmasi">Konfirmasi bayar</button>
+      </div>
+      <div id="info-bayar"></div>
+    </div>
+  </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
@@ -138,9 +204,12 @@
     let semuaProduk = {};
     let keranjang = {};
     let tipePesanan = 'makan_di_sini';
+    let notaDibayar = null;     // nota yang sedang dibayar
+    let metodeBayar = 'tunai';
 
-    const rupiah = (n) => 'Rp' + n.toLocaleString('id-ID');
+    const rupiah = (n) => 'Rp' + Number(n).toLocaleString('id-ID');
     const $ = (id) => document.getElementById(id);
+    const NAMA_TIPE = { makan_di_sini: 'Makan di sini', bawa_pulang: 'Bawa pulang', pesan_antar: 'Pesan antar' };
 
     // ================= LOGIN & LOGOUT =================
     $('form-login').onsubmit = async (e) => {
@@ -180,15 +249,25 @@
       $('halaman-login').classList.add('tersembunyi');
       $('halaman-kasir').classList.remove('tersembunyi');
       $('info-staf').textContent = `Masuk sebagai ${staf.nama} (${staf.peran})`;
-
-      semuaProduk = {};
       keranjang = {};
-      $('daftar').innerHTML = '';
       muatMeja();
       tampilkanMenu();
+      hitungOpenBill();
     }
 
-    // ================= MEJA & TIPE PESANAN =================
+    // ================= TAB =================
+    function pindahTab(nama) {
+      const kePesan = nama === 'pesan';
+      $('tab-pesan').classList.toggle('aktif', kePesan);
+      $('tab-openbill').classList.toggle('aktif', !kePesan);
+      $('tampilan-pesan').classList.toggle('tersembunyi', !kePesan);
+      $('tampilan-openbill').classList.toggle('tersembunyi', kePesan);
+      if (!kePesan) tampilkanOpenBill();
+    }
+    $('tab-pesan').onclick = () => pindahTab('pesan');
+    $('tab-openbill').onclick = () => pindahTab('openbill');
+
+    // ================= MEJA & TIPE =================
     async function muatMeja() {
       const { data } = await db.from('meja').select('id, nomor').order('id');
       const select = $('meja');
@@ -205,7 +284,6 @@
       tombol.onclick = () => {
         tipePesanan = tombol.dataset.tipe;
         document.querySelectorAll('#pilih-tipe button').forEach((b) => b.classList.toggle('aktif', b === tombol));
-        // meja hanya perlu untuk "makan di sini"
         $('bagian-meja').classList.toggle('tersembunyi', tipePesanan !== 'makan_di_sini');
       };
     });
@@ -331,10 +409,7 @@
         return;
       }
 
-      const items = Object.keys(keranjang).map((id) => ({
-        produk_id: Number(id),
-        qty: keranjang[id],
-      }));
+      const items = Object.keys(keranjang).map((id) => ({ produk_id: Number(id), qty: keranjang[id] }));
 
       $('tombol-simpan').disabled = true;
       info.textContent = 'Menyimpan...';
@@ -357,6 +432,122 @@
       keranjang = {};
       $('meja').value = '';
       tampilkanMenu();
+      hitungOpenBill();
+    };
+
+    // ================= OPEN BILL =================
+    async function hitungOpenBill() {
+      const { count } = await db.from('transaksi').select('id', { count: 'exact', head: true }).eq('status', 'open');
+      $('tab-openbill').textContent = `Open bill (${count || 0})`;
+    }
+
+    async function tampilkanOpenBill() {
+      $('pesan-openbill').textContent = 'Memuat nota...';
+      $('daftar-nota').innerHTML = '';
+
+      const { data, error } = await db
+        .from('transaksi')
+        .select('id, created_at, tipe_pesanan, subtotal, pajak, total, meja(nomor), detail_transaksi(nama_produk, qty, harga_jual)')
+        .eq('status', 'open')
+        .order('id');
+
+      if (error) {
+        $('pesan-openbill').textContent = 'Gagal memuat: ' + error.message;
+        return;
+      }
+
+      $('tab-openbill').textContent = `Open bill (${data.length})`;
+      $('pesan-openbill').textContent = data.length === 0 ? 'Semua nota sudah dibayar 🎉' : '';
+
+      data.forEach((n) => {
+        const jam = new Date(n.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+        const tempat = n.meja ? 'Meja ' + n.meja.nomor : NAMA_TIPE[n.tipe_pesanan];
+
+        const kartu = document.createElement('div');
+        kartu.className = 'nota';
+        kartu.innerHTML = `
+          <div class="nota-atas">
+            <span class="nota-judul">Nota #${n.id}</span>
+            <span class="nota-waktu">${jam}</span>
+          </div>
+          <span class="label"></span>
+          <div class="nota-isi"></div>
+          <div class="nota-total"><span>Total</span><span>${rupiah(n.total)}</span></div>
+          <button class="tombol">Bayar</button>`;
+        kartu.querySelector('.label').textContent = tempat;
+
+        const isi = kartu.querySelector('.nota-isi');
+        n.detail_transaksi.forEach((d) => {
+          const baris = document.createElement('div');
+          baris.innerHTML = `<span></span><span>${rupiah(d.harga_jual * d.qty)}</span>`;
+          baris.querySelector('span').textContent = `${d.qty}× ${d.nama_produk}`;
+          isi.appendChild(baris);
+        });
+
+        kartu.querySelector('.tombol').onclick = () => bukaJendelaBayar(n);
+        $('daftar-nota').appendChild(kartu);
+      });
+    }
+
+    // ================= BAYAR =================
+    function bukaJendelaBayar(nota) {
+      notaDibayar = nota;
+      $('judul-bayar').textContent = `Bayar Nota #${nota.id}`;
+      $('total-bayar').textContent = rupiah(nota.total);
+      $('uang').value = '';
+      $('kembalian').textContent = 'Rp0';
+      $('info-bayar').textContent = '';
+      pilihMetode('tunai');
+      $('jendela-bayar').classList.remove('tersembunyi');
+    }
+
+    function tutupJendelaBayar() {
+      $('jendela-bayar').classList.add('tersembunyi');
+      notaDibayar = null;
+    }
+
+    function pilihMetode(metode) {
+      metodeBayar = metode;
+      document.querySelectorAll('#pilih-metode button').forEach((b) => b.classList.toggle('aktif', b.dataset.metode === metode));
+      $('bagian-tunai').classList.toggle('tersembunyi', metode !== 'tunai');
+    }
+
+    document.querySelectorAll('#pilih-metode button').forEach((b) => {
+      b.onclick = () => pilihMetode(b.dataset.metode);
+    });
+
+    $('uang').oninput = () => {
+      const kembali = Number($('uang').value || 0) - notaDibayar.total;
+      $('kembalian').textContent = kembali >= 0 ? rupiah(kembali) : 'Uang kurang';
+    };
+
+    $('tombol-batal').onclick = tutupJendelaBayar;
+
+    $('tombol-konfirmasi').onclick = async () => {
+      const info = $('info-bayar');
+      info.className = '';
+
+      if (metodeBayar === 'tunai' && Number($('uang').value || 0) < notaDibayar.total) {
+        info.className = 'gagal';
+        info.textContent = 'Uang yang diterima kurang dari total.';
+        return;
+      }
+
+      $('tombol-konfirmasi').disabled = true;
+      const { error } = await db.rpc('bayar_pesanan', {
+        p_transaksi_id: notaDibayar.id,
+        p_metode: metodeBayar,
+      });
+      $('tombol-konfirmasi').disabled = false;
+
+      if (error) {
+        info.className = 'gagal';
+        info.textContent = 'Gagal: ' + error.message;
+        return;
+      }
+
+      tutupJendelaBayar();
+      tampilkanOpenBill();
     };
   </script>
 </body>
