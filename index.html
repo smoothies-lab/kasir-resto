@@ -22,8 +22,8 @@
     .kotak-login input { width: 100%; height: 46px; border: 1px solid #E4E8F2; border-radius: 12px; padding: 0 14px; font: inherit; font-size: 15px; }
     #pesan-login { color: #C2410C; font-size: 13px; min-height: 18px; margin-top: 10px; }
 
-    /* Tab navigasi */
-    .tab { display: flex; gap: 8px; padding: 12px 16px 0; max-width: 1100px; margin: 0 auto; }
+    /* Tab */
+    .tab { display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 16px 0; max-width: 1100px; margin: 0 auto; }
     .tab button { border: 0; background: #fff; color: #6B7591; border-radius: 999px; padding: 10px 16px; font: inherit; font-weight: 700; cursor: pointer; box-shadow: 0 1px 3px rgba(29,38,64,.06); }
     .tab button.aktif { background: #4672EC; color: #fff; }
 
@@ -89,6 +89,29 @@
     .dua-tombol { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
     #info-bayar { font-size: 13px; min-height: 18px; margin-top: 8px; }
 
+    /* Laporan */
+    .laporan { padding: 16px; max-width: 1100px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+    .periode { display: flex; flex-wrap: wrap; gap: 6px; background: #fff; padding: 5px; border-radius: 999px; align-self: flex-start; box-shadow: 0 1px 3px rgba(29,38,64,.06); }
+    .periode button { border: 0; background: transparent; border-radius: 999px; padding: 8px 14px; font: inherit; font-weight: 600; color: #6B7591; cursor: pointer; }
+    .periode button.aktif { background: #4672EC; color: #fff; font-weight: 800; }
+    .angka { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+    .kotak-angka { background: #fff; border-radius: 20px; padding: 16px; box-shadow: 0 2px 8px rgba(29,38,64,.06); }
+    .kotak-angka.utama { background: #4672EC; color: #fff; }
+    .kotak-angka .judul { font-size: 13px; opacity: .8; }
+    .kotak-angka .nilai { font-size: 24px; font-weight: 800; margin-top: 4px; }
+    .kotak-angka .kecil { font-size: 12px; margin-top: 4px; opacity: .85; }
+    .dua-kolom { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; }
+    .panel { background: #fff; border-radius: 20px; padding: 16px; box-shadow: 0 2px 8px rgba(29,38,64,.06); }
+    .panel h3 { margin: 0 0 10px; font-size: 15px; }
+    .baris { display: flex; justify-content: space-between; font-size: 14px; padding: 7px 0; border-bottom: 1px dashed #E4E8F2; }
+    .baris:last-child { border-bottom: 0; }
+    .baris .abu { color: #6B7591; }
+    .baris.tebal { font-weight: 800; }
+    .grafik { display: flex; align-items: flex-end; gap: 6px; height: 120px; }
+    .batang { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 4px; height: 100%; }
+    .batang div { width: 100%; background: #4672EC; border-radius: 8px 8px 3px 3px; min-height: 4px; }
+    .batang span { font-size: 11px; color: #6B7591; }
+
     @media (min-width: 800px) {
       #halaman-kasir { padding-bottom: 0; }
       .wadah { grid-template-columns: 1fr 340px; align-items: start; }
@@ -113,7 +136,7 @@
     </form>
   </section>
 
-  <!-- ================= KASIR ================= -->
+  <!-- ================= APLIKASI ================= -->
   <section id="halaman-kasir" class="tersembunyi">
     <header>
       <div>
@@ -126,16 +149,16 @@
     <nav class="tab">
       <button id="tab-pesan" class="aktif">Pesanan baru</button>
       <button id="tab-openbill">Open bill</button>
+      <button id="tab-laporan" class="tersembunyi">Laporan</button>
     </nav>
 
-    <!-- Tampilan: pesanan baru -->
+    <!-- Pesanan baru -->
     <div id="tampilan-pesan">
       <div class="wadah">
         <main>
           <p id="pesan">Memuat menu...</p>
           <div id="daftar"></div>
         </main>
-
         <aside id="keranjang">
           <h2>Pesanan</h2>
           <div class="tipe" id="pilih-tipe">
@@ -157,17 +180,68 @@
           <p id="info"></p>
         </aside>
       </div>
-
-      <a class="bar-hp" id="bar-hp" href="#keranjang">
+      <a class="bar-hp" href="#keranjang">
         <span id="bar-info">0 item</span>
         <span id="bar-total">Rp0</span>
       </a>
     </div>
 
-    <!-- Tampilan: open bill -->
+    <!-- Open bill -->
     <div id="tampilan-openbill" class="tersembunyi">
       <p id="pesan-openbill" class="kosong" style="padding: 16px; max-width: 1100px; margin: 0 auto;"></p>
       <div class="daftar-nota" id="daftar-nota"></div>
+    </div>
+
+    <!-- Laporan -->
+    <div id="tampilan-laporan" class="tersembunyi">
+      <div class="laporan">
+        <div class="periode" id="pilih-periode">
+          <button data-periode="hari" class="aktif">Hari ini</button>
+          <button data-periode="7hari">7 hari terakhir</button>
+          <button data-periode="bulan">Bulan ini</button>
+        </div>
+        <p id="pesan-laporan" class="kosong"></p>
+
+        <div class="angka">
+          <div class="kotak-angka utama">
+            <div class="judul">Laba kotor</div>
+            <div class="nilai" id="l-laba">Rp0</div>
+            <div class="kecil" id="l-margin">Margin 0%</div>
+          </div>
+          <div class="kotak-angka">
+            <div class="judul">Penjualan (sebelum pajak)</div>
+            <div class="nilai" id="l-penjualan">Rp0</div>
+          </div>
+          <div class="kotak-angka">
+            <div class="judul">Transaksi lunas</div>
+            <div class="nilai" id="l-transaksi">0</div>
+            <div class="kecil" id="l-rata"></div>
+          </div>
+        </div>
+
+        <div class="dua-kolom">
+          <div class="panel">
+            <h3>Rincian</h3>
+            <div class="baris"><span class="abu">Penjualan</span><span id="r-penjualan">Rp0</span></div>
+            <div class="baris"><span class="abu">Modal barang terjual</span><span id="r-modal">Rp0</span></div>
+            <div class="baris tebal"><span>Laba kotor</span><span id="r-laba">Rp0</span></div>
+            <div class="baris"><span class="abu">Pajak dipungut (disetor)</span><span id="r-pajak">Rp0</span></div>
+            <div class="baris tebal"><span>Total uang diterima</span><span id="r-total">Rp0</span></div>
+          </div>
+          <div class="panel">
+            <h3>Metode bayar</h3>
+            <div id="r-metode"></div>
+          </div>
+          <div class="panel">
+            <h3>Menu terlaris</h3>
+            <div id="r-menu"></div>
+          </div>
+          <div class="panel">
+            <h3>Penjualan per jam</h3>
+            <div class="grafik" id="r-jam"></div>
+          </div>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -204,12 +278,15 @@
     let semuaProduk = {};
     let keranjang = {};
     let tipePesanan = 'makan_di_sini';
-    let notaDibayar = null;     // nota yang sedang dibayar
+    let notaDibayar = null;
     let metodeBayar = 'tunai';
+    let periodeLaporan = 'hari';
 
-    const rupiah = (n) => 'Rp' + Number(n).toLocaleString('id-ID');
+    const rupiah = (n) => 'Rp' + Number(n || 0).toLocaleString('id-ID');
     const $ = (id) => document.getElementById(id);
     const NAMA_TIPE = { makan_di_sini: 'Makan di sini', bawa_pulang: 'Bawa pulang', pesan_antar: 'Pesan antar' };
+    const NAMA_METODE = { tunai: 'Tunai', qris: 'QRIS', transfer: 'Transfer' };
+    const tanggalLokal = (d) => d.toLocaleDateString('sv-SE'); // format YYYY-MM-DD sesuai jam HP/laptop
 
     // ================= LOGIN & LOGOUT =================
     $('form-login').onsubmit = async (e) => {
@@ -249,7 +326,9 @@
       $('halaman-login').classList.add('tersembunyi');
       $('halaman-kasir').classList.remove('tersembunyi');
       $('info-staf').textContent = `Masuk sebagai ${staf.nama} (${staf.peran})`;
+      $('tab-laporan').classList.toggle('tersembunyi', staf.peran !== 'owner'); // laporan khusus owner
       keranjang = {};
+      pindahTab('pesan');
       muatMeja();
       tampilkanMenu();
       hitungOpenBill();
@@ -257,15 +336,16 @@
 
     // ================= TAB =================
     function pindahTab(nama) {
-      const kePesan = nama === 'pesan';
-      $('tab-pesan').classList.toggle('aktif', kePesan);
-      $('tab-openbill').classList.toggle('aktif', !kePesan);
-      $('tampilan-pesan').classList.toggle('tersembunyi', !kePesan);
-      $('tampilan-openbill').classList.toggle('tersembunyi', kePesan);
-      if (!kePesan) tampilkanOpenBill();
+      ['pesan', 'openbill', 'laporan'].forEach((t) => {
+        $('tab-' + t).classList.toggle('aktif', t === nama);
+        $('tampilan-' + t).classList.toggle('tersembunyi', t !== nama);
+      });
+      if (nama === 'openbill') tampilkanOpenBill();
+      if (nama === 'laporan') tampilkanLaporan();
     }
     $('tab-pesan').onclick = () => pindahTab('pesan');
     $('tab-openbill').onclick = () => pindahTab('openbill');
+    $('tab-laporan').onclick = () => pindahTab('laporan');
 
     // ================= MEJA & TIPE =================
     async function muatMeja() {
@@ -410,7 +490,6 @@
       }
 
       const items = Object.keys(keranjang).map((id) => ({ produk_id: Number(id), qty: keranjang[id] }));
-
       $('tombol-simpan').disabled = true;
       info.textContent = 'Menyimpan...';
 
@@ -447,7 +526,7 @@
 
       const { data, error } = await db
         .from('transaksi')
-        .select('id, created_at, tipe_pesanan, subtotal, pajak, total, meja(nomor), detail_transaksi(nama_produk, qty, harga_jual)')
+        .select('id, created_at, tipe_pesanan, total, meja(nomor), detail_transaksi(nama_produk, qty, harga_jual)')
         .eq('status', 'open')
         .order('id');
 
@@ -549,6 +628,83 @@
       tutupJendelaBayar();
       tampilkanOpenBill();
     };
+
+    // ================= LAPORAN =================
+    document.querySelectorAll('#pilih-periode button').forEach((b) => {
+      b.onclick = () => {
+        periodeLaporan = b.dataset.periode;
+        document.querySelectorAll('#pilih-periode button').forEach((x) => x.classList.toggle('aktif', x === b));
+        tampilkanLaporan();
+      };
+    });
+
+    function rentangTanggal() {
+      const hariIni = new Date();
+      let dari = new Date(hariIni);
+      if (periodeLaporan === '7hari') dari.setDate(hariIni.getDate() - 6);
+      if (periodeLaporan === 'bulan') dari = new Date(hariIni.getFullYear(), hariIni.getMonth(), 1);
+      return { dari: tanggalLokal(dari), sampai: tanggalLokal(hariIni) };
+    }
+
+    async function tampilkanLaporan() {
+      const { dari, sampai } = rentangTanggal();
+      $('pesan-laporan').textContent = 'Menghitung laporan...';
+
+      const { data: l, error } = await db.rpc('laporan_penjualan', { p_dari: dari, p_sampai: sampai });
+      if (error) {
+        $('pesan-laporan').textContent = 'Gagal memuat laporan: ' + error.message;
+        return;
+      }
+      $('pesan-laporan').textContent = l.jumlah_transaksi === 0 ? 'Belum ada transaksi lunas di periode ini.' : '';
+
+      const margin = l.penjualan > 0 ? Math.round((l.laba_kotor / l.penjualan) * 100) : 0;
+      const rata = l.jumlah_transaksi > 0 ? Math.round(l.total_diterima / l.jumlah_transaksi) : 0;
+
+      $('l-laba').textContent = rupiah(l.laba_kotor);
+      $('l-margin').textContent = `Margin ${margin}% dari penjualan`;
+      $('l-penjualan').textContent = rupiah(l.penjualan);
+      $('l-transaksi').textContent = l.jumlah_transaksi;
+      $('l-rata').textContent = `Rata-rata ${rupiah(rata)} per nota`;
+
+      $('r-penjualan').textContent = rupiah(l.penjualan);
+      $('r-modal').textContent = '−' + rupiah(l.modal);
+      $('r-laba').textContent = rupiah(l.laba_kotor);
+      $('r-pajak').textContent = rupiah(l.pajak);
+      $('r-total').textContent = rupiah(l.total_diterima);
+
+      // Metode bayar
+      $('r-metode').innerHTML = l.per_metode.length ? '' : '<p class="kosong">Belum ada data.</p>';
+      l.per_metode.forEach((m) => {
+        const baris = document.createElement('div');
+        baris.className = 'baris';
+        baris.innerHTML = `<span><b>${NAMA_METODE[m.metode] || m.metode}</b> <span class="abu">· ${m.jumlah} nota</span></span><span>${rupiah(m.total)}</span>`;
+        $('r-metode').appendChild(baris);
+      });
+
+      // Menu terlaris
+      $('r-menu').innerHTML = l.menu_terlaris.length ? '' : '<p class="kosong">Belum ada data.</p>';
+      l.menu_terlaris.forEach((m, i) => {
+        const baris = document.createElement('div');
+        baris.className = 'baris';
+        baris.innerHTML = `<span>${i + 1}. <b class="nama-menu"></b> <span class="abu">· ${m.qty} terjual</span></span><span>laba ${rupiah(m.laba)}</span>`;
+        baris.querySelector('.nama-menu').textContent = m.nama;
+        $('r-menu').appendChild(baris);
+      });
+
+      // Grafik per jam (jam 08.00 - 22.00)
+      const peta = {};
+      l.per_jam.forEach((j) => { peta[j.jam] = Number(j.total); });
+      const tertinggi = Math.max(1, ...Object.values(peta));
+      $('r-jam').innerHTML = '';
+      for (let jam = 8; jam <= 22; jam++) {
+        const nilai = peta[jam] || 0;
+        const batang = document.createElement('div');
+        batang.className = 'batang';
+        batang.title = `${jam}.00 · ${rupiah(nilai)}`;
+        batang.innerHTML = `<div style="height:${(nilai / tertinggi) * 100}%; opacity:${nilai ? 1 : 0.2}"></div><span>${jam}</span>`;
+        $('r-jam').appendChild(batang);
+      }
+    }
   </script>
 </body>
 </html>
