@@ -5,44 +5,92 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Kasir Resto</title>
   <style>
-    body { margin: 0; font-family: system-ui, sans-serif; background: #F2F4FA; color: #1D2640; }
-    header { background: #4672EC; color: #fff; padding: 20px 16px; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: system-ui, sans-serif; background: #F2F4FA; color: #1D2640; padding-bottom: 90px; }
+    header { background: #4672EC; color: #fff; padding: 18px 16px; }
     header h1 { margin: 0; font-size: 22px; }
     header p { margin: 4px 0 0; font-size: 13px; opacity: .85; }
-    main { padding: 16px; max-width: 900px; margin: 0 auto; }
-    h2 { font-size: 16px; margin: 20px 0 10px; }
-    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }
-    .kartu { background: #fff; border-radius: 16px; padding: 14px; box-shadow: 0 2px 8px rgba(29,38,64,.06); }
+    .wadah { display: grid; grid-template-columns: 1fr; gap: 16px; padding: 16px; max-width: 1100px; margin: 0 auto; }
+    h2 { font-size: 16px; margin: 18px 0 10px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+    .kartu { background: #fff; border: 2px solid transparent; border-radius: 16px; padding: 14px; text-align: left; font: inherit; color: inherit; cursor: pointer; box-shadow: 0 2px 8px rgba(29,38,64,.06); }
+    .kartu:hover { border-color: #C9D6FB; }
+    .kartu.dipilih { border-color: #4672EC; }
+    .kartu:disabled { opacity: .5; cursor: not-allowed; }
     .nama { font-weight: 700; font-size: 14px; }
     .harga { color: #4672EC; font-weight: 800; margin-top: 6px; }
     .stok { color: #6B7591; font-size: 12px; margin-top: 4px; }
+    aside { background: #fff; border-radius: 20px; padding: 16px; box-shadow: 0 2px 8px rgba(29,38,64,.06); }
+    aside h2 { margin-top: 0; }
+    .item { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px dashed #E4E8F2; }
+    .item-info { flex: 1; min-width: 0; }
+    .item-nama { font-weight: 700; font-size: 14px; }
+    .item-harga { color: #6B7591; font-size: 12px; }
+    .qty { display: flex; align-items: center; gap: 8px; font-weight: 800; }
+    .qty button { width: 34px; height: 34px; border-radius: 10px; border: 0; background: #E8EEFD; color: #2F57C9; font-size: 18px; font-weight: 800; cursor: pointer; }
+    .kosong { color: #6B7591; font-size: 14px; padding: 8px 0; }
+    .ringkas div { display: flex; justify-content: space-between; font-size: 14px; margin-top: 8px; }
+    .ringkas .total { font-size: 18px; font-weight: 800; border-top: 1px solid #E4E8F2; padding-top: 10px; }
+    .tombol { width: 100%; margin-top: 14px; height: 48px; border: 0; border-radius: 14px; background: #4672EC; color: #fff; font: inherit; font-weight: 800; font-size: 15px; cursor: pointer; }
+    .tombol:disabled { background: #A3B4E8; cursor: not-allowed; }
+    #info { color: #6B7591; font-size: 13px; text-align: center; }
+    .bar-hp { position: fixed; left: 16px; right: 16px; bottom: 16px; display: flex; justify-content: space-between; align-items: center; background: #4672EC; color: #fff; padding: 16px 20px; border-radius: 999px; text-decoration: none; font-weight: 800; box-shadow: 0 10px 24px rgba(70,114,236,.35); }
     #pesan { color: #6B7591; }
+    @media (min-width: 800px) {
+      body { padding-bottom: 0; }
+      .wadah { grid-template-columns: 1fr 340px; align-items: start; }
+      aside { position: sticky; top: 16px; }
+      .bar-hp { display: none; }
+    }
   </style>
 </head>
 <body>
   <header>
     <h1>Kasir Resto</h1>
-    <p>Daftar menu langsung dari database</p>
+    <p>Klik menu untuk menambahkan ke pesanan</p>
   </header>
-  <main>
-    <p id="pesan">Memuat menu...</p>
-    <div id="daftar"></div>
-  </main>
+
+  <div class="wadah">
+    <main>
+      <p id="pesan">Memuat menu...</p>
+      <div id="daftar"></div>
+    </main>
+
+    <aside id="keranjang">
+      <h2>Pesanan</h2>
+      <div id="isi-keranjang"></div>
+      <div class="ringkas">
+        <div><span>Subtotal</span><span id="subtotal">Rp0</span></div>
+        <div><span>Pajak (10%)</span><span id="pajak">Rp0</span></div>
+        <div class="total"><span>Total</span><span id="total">Rp0</span></div>
+      </div>
+      <button class="tombol" id="tombol-simpan" disabled>Simpan pesanan</button>
+      <p id="info"></p>
+    </aside>
+  </div>
+
+  <a class="bar-hp" href="#keranjang">
+    <span id="bar-info">0 item</span>
+    <span id="bar-total">Rp0</span>
+  </a>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
-    // Alamat proyek & kunci publik (aman ditaruh di sini)
     const SUPABASE_URL = 'https://wcigowcsdvapllyfejec.supabase.co';
     const SUPABASE_KEY = 'sb_publishable_qScsmwn8pYRm4BJBWQmgsg_1awJYDbi';
     const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+    const PAJAK = 0.10;          // pajak 10%
+    const semuaProduk = {};      // daftar produk: { id: produk }
+    const keranjang = {};        // isi keranjang: { id: jumlah }
+
     const rupiah = (n) => 'Rp' + n.toLocaleString('id-ID');
 
+    // ---------- Tampilkan menu ----------
     async function tampilkanMenu() {
       const pesan = document.getElementById('pesan');
       const daftar = document.getElementById('daftar');
 
-      // Ambil kategori beserta produk di dalamnya
       const { data, error } = await db
         .from('kategori')
         .select('id, nama, produk(id, nama, harga_jual, stok)')
@@ -61,19 +109,102 @@
 
         const grid = document.createElement('div');
         grid.className = 'grid';
+
         kat.produk.forEach((p) => {
-          const kartu = document.createElement('div');
+          semuaProduk[p.id] = p;
+
+          const kartu = document.createElement('button');
           kartu.className = 'kartu';
+          kartu.dataset.id = p.id;
+          kartu.disabled = p.stok <= 0;
           kartu.innerHTML = `
             <div class="nama"></div>
             <div class="harga">${rupiah(p.harga_jual)}</div>
             <div class="stok">Stok: ${p.stok}</div>`;
           kartu.querySelector('.nama').textContent = p.nama;
+          kartu.onclick = () => tambah(p.id);
           grid.appendChild(kartu);
         });
+
         daftar.appendChild(grid);
       });
+
+      gambarKeranjang();
     }
+
+    // ---------- Tambah & kurangi ----------
+    function tambah(id) {
+      const jumlah = keranjang[id] || 0;
+      if (jumlah >= semuaProduk[id].stok) return; // tidak boleh melebihi stok
+      keranjang[id] = jumlah + 1;
+      gambarKeranjang();
+    }
+
+    function kurang(id) {
+      keranjang[id] = keranjang[id] - 1;
+      if (keranjang[id] <= 0) delete keranjang[id];
+      gambarKeranjang();
+    }
+
+    // ---------- Gambar ulang keranjang ----------
+    function gambarKeranjang() {
+      const isi = document.getElementById('isi-keranjang');
+      isi.innerHTML = '';
+
+      let subtotal = 0;
+      let jumlahItem = 0;
+      const daftarId = Object.keys(keranjang);
+
+      if (daftarId.length === 0) {
+        isi.innerHTML = '<p class="kosong">Belum ada menu. Klik menu untuk menambahkan.</p>';
+      }
+
+      daftarId.forEach((id) => {
+        const p = semuaProduk[id];
+        const qty = keranjang[id];
+        subtotal += p.harga_jual * qty;
+        jumlahItem += qty;
+
+        const baris = document.createElement('div');
+        baris.className = 'item';
+        baris.innerHTML = `
+          <div class="item-info">
+            <div class="item-nama"></div>
+            <div class="item-harga">${qty} × ${rupiah(p.harga_jual)}</div>
+          </div>
+          <div class="qty">
+            <button aria-label="Kurangi">−</button>
+            <span>${qty}</span>
+            <button aria-label="Tambah">+</button>
+          </div>`;
+        baris.querySelector('.item-nama').textContent = p.nama;
+        const tombol = baris.querySelectorAll('.qty button');
+        tombol[0].onclick = () => kurang(id);
+        tombol[1].onclick = () => tambah(id);
+        isi.appendChild(baris);
+      });
+
+      const pajak = Math.round(subtotal * PAJAK);
+      const total = subtotal + pajak;
+
+      document.getElementById('subtotal').textContent = rupiah(subtotal);
+      document.getElementById('pajak').textContent = rupiah(pajak);
+      document.getElementById('total').textContent = rupiah(total);
+      document.getElementById('bar-info').textContent = jumlahItem + ' item';
+      document.getElementById('bar-total').textContent = rupiah(total);
+      document.getElementById('tombol-simpan').disabled = daftarId.length === 0;
+
+      // beri garis biru pada menu yang ada di keranjang
+      document.querySelectorAll('.kartu').forEach((k) => {
+        k.classList.toggle('dipilih', Boolean(keranjang[k.dataset.id]));
+      });
+    }
+
+    // ---------- Tombol simpan (menyusul) ----------
+    document.getElementById('tombol-simpan').onclick = () => {
+      document.getElementById('info').textContent =
+        'Fitur simpan ke database menyusul di langkah berikutnya 😉';
+    };
 
     tampilkanMenu();
   </script>
