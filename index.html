@@ -58,6 +58,7 @@
     .tombol { width: 100%; margin-top: 14px; height: 48px; border: 0; border-radius: 14px; background: #4672EC; color: #fff; font: inherit; font-weight: 800; font-size: 15px; cursor: pointer; }
     .tombol:disabled { background: #A3B4E8; cursor: not-allowed; }
     .tombol.kedua { background: #F2F4FA; color: #3A4560; }
+    .tombol.kecil { width: auto; height: 38px; margin: 0; padding: 0 14px; font-size: 13px; border-radius: 10px; }
     #info { font-size: 13px; text-align: center; min-height: 18px; }
     .sukses { color: #15803D; font-weight: 700; }
     .gagal { color: #C2410C; font-weight: 700; }
@@ -75,19 +76,22 @@
     .nota-isi div { display: flex; justify-content: space-between; margin-top: 4px; }
     .nota-total { display: flex; justify-content: space-between; font-weight: 800; font-size: 16px; border-top: 1px solid #E4E8F2; padding-top: 8px; }
 
-    /* Jendela bayar */
+    /* Jendela (bayar, produk, stok) */
     .latar { position: fixed; inset: 0; background: rgba(29,38,64,.45); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 10; }
-    .jendela { background: #fff; width: 100%; max-width: 380px; border-radius: 24px; padding: 22px; }
+    .jendela { background: #fff; width: 100%; max-width: 400px; border-radius: 24px; padding: 22px; max-height: 92vh; overflow-y: auto; }
     .jendela h2 { margin: 0 0 4px; }
     .jendela .besar { font-size: 28px; font-weight: 800; margin: 4px 0 14px; }
+    .jendela .sub { color: #6B7591; font-size: 13px; margin: 0 0 12px; }
     .metode { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; }
     .metode button { height: 46px; border: 1px solid #E4E8F2; background: #fff; border-radius: 12px; font: inherit; font-weight: 700; color: #3A4560; cursor: pointer; }
     .metode button.aktif { background: #4672EC; border-color: #4672EC; color: #fff; }
-    .jendela label { display: block; font-size: 13px; font-weight: 700; margin-bottom: 6px; }
-    .jendela input { width: 100%; height: 46px; border: 1px solid #E4E8F2; border-radius: 12px; padding: 0 14px; font: inherit; font-size: 16px; }
+    .jendela label { display: block; font-size: 13px; font-weight: 700; margin: 10px 0 6px; }
+    .jendela input, .jendela select { width: 100%; height: 46px; border: 1px solid #E4E8F2; border-radius: 12px; padding: 0 14px; font: inherit; font-size: 15px; background: #fff; }
+    .jendela .centang { display: flex; align-items: center; gap: 8px; margin-top: 12px; font-size: 14px; font-weight: 600; }
+    .jendela .centang input { width: 20px; height: 20px; }
     .kembalian { display: flex; justify-content: space-between; margin-top: 10px; padding: 12px; border-radius: 12px; background: #E8EEFD; color: #2F57C9; font-weight: 800; }
     .dua-tombol { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-    #info-bayar { font-size: 13px; min-height: 18px; margin-top: 8px; }
+    .info-jendela { font-size: 13px; min-height: 18px; margin-top: 8px; }
 
     /* Laporan */
     .laporan { padding: 16px; max-width: 1100px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
@@ -103,14 +107,29 @@
     .dua-kolom { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; }
     .panel { background: #fff; border-radius: 20px; padding: 16px; box-shadow: 0 2px 8px rgba(29,38,64,.06); }
     .panel h3 { margin: 0 0 10px; font-size: 15px; }
-    .baris { display: flex; justify-content: space-between; font-size: 14px; padding: 7px 0; border-bottom: 1px dashed #E4E8F2; }
+    .baris { display: flex; justify-content: space-between; gap: 8px; font-size: 14px; padding: 7px 0; border-bottom: 1px dashed #E4E8F2; }
     .baris:last-child { border-bottom: 0; }
-    .baris .abu { color: #6B7591; }
+    .abu { color: #6B7591; }
     .baris.tebal { font-weight: 800; }
     .grafik { display: flex; align-items: flex-end; gap: 6px; height: 120px; }
     .batang { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 4px; height: 100%; }
     .batang div { width: 100%; background: #4672EC; border-radius: 8px 8px 3px 3px; min-height: 4px; }
     .batang span { font-size: 11px; color: #6B7591; }
+
+    /* Produk */
+    .kepala-produk { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .kepala-produk h3 { margin: 0; }
+    .tabel-wadah { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 640px; }
+    th { text-align: left; font-size: 12px; color: #6B7591; font-weight: 700; padding: 10px 8px; border-bottom: 1px solid #E4E8F2; }
+    td { padding: 10px 8px; border-bottom: 1px dashed #E4E8F2; vertical-align: middle; }
+    td.angka-kanan, th.angka-kanan { text-align: right; }
+    .lencana { font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 999px; }
+    .lencana.hijau { background: #DCFCE7; color: #166534; }
+    .lencana.abu-abu { background: #F2F4FA; color: #6B7591; }
+    .lencana.oranye { background: #FFEDD5; color: #9A3412; }
+    .aksi { display: flex; gap: 6px; justify-content: flex-end; }
+    .aksi button { border: 0; border-radius: 10px; padding: 8px 10px; font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; background: #E8EEFD; color: #2F57C9; }
 
     @media (min-width: 800px) {
       #halaman-kasir { padding-bottom: 0; }
@@ -149,7 +168,8 @@
     <nav class="tab">
       <button id="tab-pesan" class="aktif">Pesanan baru</button>
       <button id="tab-openbill">Open bill</button>
-      <button id="tab-laporan" class="tersembunyi">Laporan</button>
+      <button id="tab-produk" class="tersembunyi khusus-owner">Produk &amp; stok</button>
+      <button id="tab-laporan" class="tersembunyi khusus-owner">Laporan</button>
     </nav>
 
     <!-- Pesanan baru -->
@@ -190,6 +210,41 @@
     <div id="tampilan-openbill" class="tersembunyi">
       <p id="pesan-openbill" class="kosong" style="padding: 16px; max-width: 1100px; margin: 0 auto;"></p>
       <div class="daftar-nota" id="daftar-nota"></div>
+    </div>
+
+    <!-- Produk & stok -->
+    <div id="tampilan-produk" class="tersembunyi">
+      <div class="laporan">
+        <div class="panel">
+          <div class="kepala-produk">
+            <h3>Daftar menu</h3>
+            <button class="tombol kecil" id="tombol-menu-baru">+ Menu baru</button>
+          </div>
+          <p id="pesan-produk" class="kosong"></p>
+          <div class="tabel-wadah">
+            <table>
+              <thead>
+                <tr>
+                  <th>Menu</th>
+                  <th>Kategori</th>
+                  <th class="angka-kanan">Harga jual</th>
+                  <th class="angka-kanan">Modal</th>
+                  <th class="angka-kanan">Margin</th>
+                  <th class="angka-kanan">Stok</th>
+                  <th>Status</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="isi-tabel-produk"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h3>Riwayat perubahan stok terbaru</h3>
+          <div id="riwayat-stok"></div>
+        </div>
+      </div>
     </div>
 
     <!-- Laporan -->
@@ -264,8 +319,53 @@
         <button class="tombol kedua" id="tombol-batal">Batal</button>
         <button class="tombol" id="tombol-konfirmasi">Konfirmasi bayar</button>
       </div>
-      <div id="info-bayar"></div>
+      <div class="info-jendela" id="info-bayar"></div>
     </div>
+  </div>
+
+  <!-- ================= JENDELA MENU (tambah/ubah) ================= -->
+  <div class="latar tersembunyi" id="jendela-produk">
+    <form class="jendela" id="form-produk">
+      <h2 id="judul-produk">Menu baru</h2>
+      <p class="sub" id="sub-produk">Stok awal 0. Tambah stok setelah menu disimpan.</p>
+      <label for="p-nama">Nama menu</label>
+      <input id="p-nama" type="text" required maxlength="60" placeholder="contoh: Nasi Ayam Bakar">
+      <label for="p-kategori">Kategori</label>
+      <select id="p-kategori" required></select>
+      <label for="p-jual">Harga jual (Rp)</label>
+      <input id="p-jual" type="number" inputmode="numeric" min="1" required placeholder="contoh: 20000">
+      <label for="p-modal">Harga modal (Rp)</label>
+      <input id="p-modal" type="number" inputmode="numeric" min="0" required placeholder="contoh: 10000">
+      <div class="kembalian"><span>Margin</span><span id="p-margin">-</span></div>
+      <label class="centang"><input id="p-aktif" type="checkbox" checked> Menu aktif (dijual)</label>
+      <div class="dua-tombol">
+        <button type="button" class="tombol kedua" id="batal-produk">Batal</button>
+        <button type="submit" class="tombol" id="simpan-produk">Simpan</button>
+      </div>
+      <div class="info-jendela" id="info-produk"></div>
+    </form>
+  </div>
+
+  <!-- ================= JENDELA STOK ================= -->
+  <div class="latar tersembunyi" id="jendela-stok">
+    <form class="jendela" id="form-stok">
+      <h2 id="judul-stok">Ubah stok</h2>
+      <p class="sub" id="sub-stok"></p>
+      <label for="s-alasan">Jenis perubahan</label>
+      <select id="s-alasan">
+        <option value="tambah_stok">Tambah stok (habis belanja / masak)</option>
+        <option value="rusak">Kurangi: rusak / terbuang</option>
+        <option value="koreksi">Koreksi hasil hitung (bisa + atau −)</option>
+      </select>
+      <label for="s-jumlah" id="label-jumlah">Jumlah ditambah</label>
+      <input id="s-jumlah" type="number" inputmode="numeric" required placeholder="contoh: 10">
+      <div class="kembalian"><span>Stok setelahnya</span><span id="s-hasil">-</span></div>
+      <div class="dua-tombol">
+        <button type="button" class="tombol kedua" id="batal-stok">Batal</button>
+        <button type="submit" class="tombol" id="simpan-stok">Simpan</button>
+      </div>
+      <div class="info-jendela" id="info-stok"></div>
+    </form>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -281,12 +381,21 @@
     let notaDibayar = null;
     let metodeBayar = 'tunai';
     let periodeLaporan = 'hari';
+    let daftarKategori = [];
+    let produkDiubah = null;   // menu yang sedang diedit (null = menu baru)
+    let produkStok = null;     // menu yang sedang diubah stoknya
 
     const rupiah = (n) => 'Rp' + Number(n || 0).toLocaleString('id-ID');
     const $ = (id) => document.getElementById(id);
     const NAMA_TIPE = { makan_di_sini: 'Makan di sini', bawa_pulang: 'Bawa pulang', pesan_antar: 'Pesan antar' };
     const NAMA_METODE = { tunai: 'Tunai', qris: 'QRIS', transfer: 'Transfer' };
-    const tanggalLokal = (d) => d.toLocaleDateString('sv-SE'); // format YYYY-MM-DD sesuai jam HP/laptop
+    const NAMA_ALASAN = { penjualan: 'Penjualan', tambah_stok: 'Tambah stok', rusak: 'Rusak / terbuang', koreksi: 'Koreksi' };
+    const tanggalLokal = (d) => d.toLocaleDateString('sv-SE');
+
+    function tampilkanInfo(el, teks, jenis) {
+      el.className = 'info-jendela ' + (jenis || '');
+      el.textContent = teks;
+    }
 
     // ================= LOGIN & LOGOUT =================
     $('form-login').onsubmit = async (e) => {
@@ -326,28 +435,31 @@
       $('halaman-login').classList.add('tersembunyi');
       $('halaman-kasir').classList.remove('tersembunyi');
       $('info-staf').textContent = `Masuk sebagai ${staf.nama} (${staf.peran})`;
-      $('tab-laporan').classList.toggle('tersembunyi', staf.peran !== 'owner'); // laporan khusus owner
+      document.querySelectorAll('.khusus-owner').forEach((el) => el.classList.toggle('tersembunyi', staf.peran !== 'owner'));
       keranjang = {};
       pindahTab('pesan');
       muatMeja();
+      muatKategori();
       tampilkanMenu();
       hitungOpenBill();
     }
 
     // ================= TAB =================
     function pindahTab(nama) {
-      ['pesan', 'openbill', 'laporan'].forEach((t) => {
+      ['pesan', 'openbill', 'produk', 'laporan'].forEach((t) => {
         $('tab-' + t).classList.toggle('aktif', t === nama);
         $('tampilan-' + t).classList.toggle('tersembunyi', t !== nama);
       });
+      if (nama === 'pesan') tampilkanMenu();
       if (nama === 'openbill') tampilkanOpenBill();
+      if (nama === 'produk') tampilkanProduk();
       if (nama === 'laporan') tampilkanLaporan();
     }
-    $('tab-pesan').onclick = () => pindahTab('pesan');
-    $('tab-openbill').onclick = () => pindahTab('openbill');
-    $('tab-laporan').onclick = () => pindahTab('laporan');
+    ['pesan', 'openbill', 'produk', 'laporan'].forEach((t) => {
+      $('tab-' + t).onclick = () => pindahTab(t);
+    });
 
-    // ================= MEJA & TIPE =================
+    // ================= MEJA, KATEGORI & TIPE =================
     async function muatMeja() {
       const { data } = await db.from('meja').select('id, nomor').order('id');
       const select = $('meja');
@@ -360,6 +472,18 @@
       });
     }
 
+    async function muatKategori() {
+      const { data } = await db.from('kategori').select('id, nama').order('id');
+      daftarKategori = data || [];
+      $('p-kategori').innerHTML = '';
+      daftarKategori.forEach((k) => {
+        const opsi = document.createElement('option');
+        opsi.value = k.id;
+        opsi.textContent = k.nama;
+        $('p-kategori').appendChild(opsi);
+      });
+    }
+
     document.querySelectorAll('#pilih-tipe button').forEach((tombol) => {
       tombol.onclick = () => {
         tipePesanan = tombol.dataset.tipe;
@@ -368,7 +492,7 @@
       };
     });
 
-    // ================= MENU =================
+    // ================= MENU KASIR =================
     async function tampilkanMenu() {
       $('pesan').textContent = 'Memuat menu...';
       $('daftar').innerHTML = '';
@@ -376,7 +500,8 @@
 
       const { data, error } = await db
         .from('kategori')
-        .select('id, nama, produk(id, nama, harga_jual, stok)')
+        .select('id, nama, produk(id, nama, harga_jual, stok, aktif)')
+        .eq('produk.aktif', true)
         .order('id')
         .order('id', { referencedTable: 'produk' });
 
@@ -387,6 +512,7 @@
 
       $('pesan').textContent = '';
       data.forEach((kat) => {
+        if (kat.produk.length === 0) return;
         const judul = document.createElement('h2');
         judul.textContent = kat.nama;
         $('daftar').appendChild(judul);
@@ -402,7 +528,7 @@
           kartu.innerHTML = `
             <div class="nama"></div>
             <div class="harga">${rupiah(p.harga_jual)}</div>
-            <div class="stok">Stok: ${p.stok}</div>`;
+            <div class="stok">${p.stok > 0 ? 'Stok: ' + p.stok : 'Stok habis'}</div>`;
           kartu.querySelector('.nama').textContent = p.nama;
           kartu.onclick = () => tambah(p.id);
           grid.appendChild(kartu);
@@ -410,6 +536,12 @@
         $('daftar').appendChild(grid);
       });
 
+      // buang isi keranjang yang menunya sudah tidak tersedia
+      Object.keys(keranjang).forEach((id) => {
+        if (!semuaProduk[id]) delete keranjang[id];
+        else if (keranjang[id] > semuaProduk[id].stok) keranjang[id] = semuaProduk[id].stok;
+        if (keranjang[id] <= 0) delete keranjang[id];
+      });
       gambarKeranjang();
     }
 
@@ -575,7 +707,7 @@
       $('total-bayar').textContent = rupiah(nota.total);
       $('uang').value = '';
       $('kembalian').textContent = 'Rp0';
-      $('info-bayar').textContent = '';
+      tampilkanInfo($('info-bayar'), '');
       pilihMetode('tunai');
       $('jendela-bayar').classList.remove('tersembunyi');
     }
@@ -603,12 +735,8 @@
     $('tombol-batal').onclick = tutupJendelaBayar;
 
     $('tombol-konfirmasi').onclick = async () => {
-      const info = $('info-bayar');
-      info.className = '';
-
       if (metodeBayar === 'tunai' && Number($('uang').value || 0) < notaDibayar.total) {
-        info.className = 'gagal';
-        info.textContent = 'Uang yang diterima kurang dari total.';
+        tampilkanInfo($('info-bayar'), 'Uang yang diterima kurang dari total.', 'gagal');
         return;
       }
 
@@ -620,13 +748,205 @@
       $('tombol-konfirmasi').disabled = false;
 
       if (error) {
-        info.className = 'gagal';
-        info.textContent = 'Gagal: ' + error.message;
+        tampilkanInfo($('info-bayar'), 'Gagal: ' + error.message, 'gagal');
         return;
       }
 
       tutupJendelaBayar();
       tampilkanOpenBill();
+    };
+
+    // ================= PRODUK & STOK =================
+    async function tampilkanProduk() {
+      $('pesan-produk').textContent = 'Memuat menu...';
+      $('isi-tabel-produk').innerHTML = '';
+
+      const { data, error } = await db
+        .from('produk')
+        .select('id, nama, kategori_id, harga_jual, harga_modal, stok, aktif, kategori(nama)')
+        .order('aktif', { ascending: false })
+        .order('kategori_id')
+        .order('id');
+
+      if (error) {
+        $('pesan-produk').textContent = 'Gagal memuat: ' + error.message;
+        return;
+      }
+      $('pesan-produk').textContent = data.length === 0 ? 'Belum ada menu.' : '';
+
+      data.forEach((p) => {
+        const margin = p.harga_jual > 0 ? Math.round(((p.harga_jual - p.harga_modal) / p.harga_jual) * 100) : 0;
+        let status = '<span class="lencana hijau">Dijual</span>';
+        if (!p.aktif) status = '<span class="lencana abu-abu">Nonaktif</span>';
+        else if (p.stok <= 0) status = '<span class="lencana oranye">Stok habis</span>';
+        else if (p.stok <= 5) status = '<span class="lencana oranye">Stok menipis</span>';
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><b class="nama-menu"></b></td>
+          <td class="kategori-menu abu"></td>
+          <td class="angka-kanan">${rupiah(p.harga_jual)}</td>
+          <td class="angka-kanan abu">${rupiah(p.harga_modal)}</td>
+          <td class="angka-kanan">${margin}%</td>
+          <td class="angka-kanan"><b>${p.stok}</b></td>
+          <td>${status}</td>
+          <td><div class="aksi"><button class="ubah">Ubah</button><button class="stok-btn">Stok</button></div></td>`;
+        tr.querySelector('.nama-menu').textContent = p.nama;
+        tr.querySelector('.kategori-menu').textContent = p.kategori ? p.kategori.nama : '-';
+        tr.querySelector('.ubah').onclick = () => bukaJendelaProduk(p);
+        tr.querySelector('.stok-btn').onclick = () => bukaJendelaStok(p);
+        $('isi-tabel-produk').appendChild(tr);
+      });
+
+      tampilkanRiwayatStok();
+    }
+
+    async function tampilkanRiwayatStok() {
+      const { data, error } = await db
+        .from('log_stok')
+        .select('id, created_at, perubahan, stok_setelah, alasan, transaksi_id, produk(nama), staf(nama)')
+        .order('id', { ascending: false })
+        .limit(10);
+
+      const wadah = $('riwayat-stok');
+      wadah.innerHTML = '';
+      if (error) { wadah.textContent = 'Gagal memuat riwayat: ' + error.message; return; }
+      if (data.length === 0) { wadah.innerHTML = '<p class="kosong">Belum ada perubahan stok.</p>'; return; }
+
+      data.forEach((l) => {
+        const waktu = new Date(l.created_at).toLocaleString('id-ID', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+        const tanda = l.perubahan > 0 ? '+' + l.perubahan : String(l.perubahan);
+        const warna = l.perubahan > 0 ? '#15803D' : '#C2410C';
+        const nota = l.transaksi_id ? ` · Nota #${l.transaksi_id}` : '';
+
+        const baris = document.createElement('div');
+        baris.className = 'baris';
+        baris.innerHTML = `
+          <span><b style="color:${warna}">${tanda}</b> <b class="nama-menu"></b>
+            <span class="abu">· ${NAMA_ALASAN[l.alasan] || l.alasan}${nota}</span></span>
+          <span class="abu" style="text-align:right">sisa ${l.stok_setelah}<br><small class="oleh"></small></span>`;
+        baris.querySelector('.nama-menu').textContent = l.produk ? l.produk.nama : '-';
+        baris.querySelector('.oleh').textContent = `${waktu} · ${l.staf ? l.staf.nama : '-'}`;
+        wadah.appendChild(baris);
+      });
+    }
+
+    // ----- Jendela tambah / ubah menu -----
+    function hitungMarginForm() {
+      const jual = Number($('p-jual').value || 0);
+      const modal = Number($('p-modal').value || 0);
+      if (!jual) { $('p-margin').textContent = '-'; return; }
+      const untung = jual - modal;
+      $('p-margin').textContent = `${rupiah(untung)} (${Math.round((untung / jual) * 100)}%)`;
+    }
+    $('p-jual').oninput = hitungMarginForm;
+    $('p-modal').oninput = hitungMarginForm;
+
+    function bukaJendelaProduk(p) {
+      produkDiubah = p || null;
+      $('judul-produk').textContent = p ? 'Ubah menu' : 'Menu baru';
+      $('sub-produk').textContent = p ? 'Perubahan harga tidak mengubah nota lama.' : 'Stok awal 0. Tambah stok setelah menu disimpan.';
+      $('p-nama').value = p ? p.nama : '';
+      $('p-kategori').value = p ? p.kategori_id : (daftarKategori[0] ? daftarKategori[0].id : '');
+      $('p-jual').value = p ? p.harga_jual : '';
+      $('p-modal').value = p ? p.harga_modal : '';
+      $('p-aktif').checked = p ? p.aktif : true;
+      hitungMarginForm();
+      tampilkanInfo($('info-produk'), '');
+      $('jendela-produk').classList.remove('tersembunyi');
+      $('p-nama').focus();
+    }
+
+    $('tombol-menu-baru').onclick = () => bukaJendelaProduk(null);
+    $('batal-produk').onclick = () => $('jendela-produk').classList.add('tersembunyi');
+
+    $('form-produk').onsubmit = async (e) => {
+      e.preventDefault();
+      const jual = Number($('p-jual').value);
+      const modal = Number($('p-modal').value);
+      if (modal > jual) {
+        tampilkanInfo($('info-produk'), 'Hati-hati: harga modal lebih besar dari harga jual (rugi). Ubah dulu angkanya.', 'gagal');
+        return;
+      }
+
+      $('simpan-produk').disabled = true;
+      const { error } = await db.rpc('simpan_produk', {
+        p_id: produkDiubah ? produkDiubah.id : null,
+        p_nama: $('p-nama').value,
+        p_kategori_id: Number($('p-kategori').value),
+        p_harga_jual: jual,
+        p_harga_modal: modal,
+        p_aktif: $('p-aktif').checked,
+      });
+      $('simpan-produk').disabled = false;
+
+      if (error) {
+        tampilkanInfo($('info-produk'), 'Gagal: ' + error.message, 'gagal');
+        return;
+      }
+      $('jendela-produk').classList.add('tersembunyi');
+      tampilkanProduk();
+    };
+
+    // ----- Jendela ubah stok -----
+    function hitungStokBaru() {
+      const jumlah = Number($('s-jumlah').value || 0);
+      const alasan = $('s-alasan').value;
+      let perubahan = jumlah;
+      if (alasan === 'rusak') perubahan = -Math.abs(jumlah);
+      if (alasan === 'tambah_stok') perubahan = Math.abs(jumlah);
+      const hasil = produkStok.stok + perubahan;
+      $('s-hasil').textContent = jumlah ? (hasil < 0 ? 'Tidak boleh minus' : hasil) : produkStok.stok;
+      return perubahan;
+    }
+
+    function aturLabelStok() {
+      const alasan = $('s-alasan').value;
+      $('label-jumlah').textContent =
+        alasan === 'tambah_stok' ? 'Jumlah ditambah' :
+        alasan === 'rusak' ? 'Jumlah yang rusak / terbuang' :
+        'Selisih (contoh: 3 atau -2)';
+      hitungStokBaru();
+    }
+
+    function bukaJendelaStok(p) {
+      produkStok = p;
+      $('judul-stok').textContent = 'Ubah stok';
+      $('sub-stok').textContent = `${p.nama} · stok sekarang ${p.stok}`;
+      $('s-alasan').value = 'tambah_stok';
+      $('s-jumlah').value = '';
+      aturLabelStok();
+      tampilkanInfo($('info-stok'), '');
+      $('jendela-stok').classList.remove('tersembunyi');
+      $('s-jumlah').focus();
+    }
+
+    $('s-alasan').onchange = aturLabelStok;
+    $('s-jumlah').oninput = hitungStokBaru;
+    $('batal-stok').onclick = () => $('jendela-stok').classList.add('tersembunyi');
+
+    $('form-stok').onsubmit = async (e) => {
+      e.preventDefault();
+      const perubahan = hitungStokBaru();
+      if (!perubahan) {
+        tampilkanInfo($('info-stok'), 'Isi jumlahnya dulu.', 'gagal');
+        return;
+      }
+
+      $('simpan-stok').disabled = true;
+      const { error } = await db.rpc('ubah_stok', {
+        p_produk_id: produkStok.id,
+        p_perubahan: perubahan,
+        p_alasan: $('s-alasan').value,
+      });
+      $('simpan-stok').disabled = false;
+
+      if (error) {
+        tampilkanInfo($('info-stok'), 'Gagal: ' + error.message, 'gagal');
+        return;
+      }
+      $('jendela-stok').classList.add('tersembunyi');
+      tampilkanProduk();
     };
 
     // ================= LAPORAN =================
@@ -672,7 +992,6 @@
       $('r-pajak').textContent = rupiah(l.pajak);
       $('r-total').textContent = rupiah(l.total_diterima);
 
-      // Metode bayar
       $('r-metode').innerHTML = l.per_metode.length ? '' : '<p class="kosong">Belum ada data.</p>';
       l.per_metode.forEach((m) => {
         const baris = document.createElement('div');
@@ -681,7 +1000,6 @@
         $('r-metode').appendChild(baris);
       });
 
-      // Menu terlaris
       $('r-menu').innerHTML = l.menu_terlaris.length ? '' : '<p class="kosong">Belum ada data.</p>';
       l.menu_terlaris.forEach((m, i) => {
         const baris = document.createElement('div');
@@ -691,7 +1009,6 @@
         $('r-menu').appendChild(baris);
       });
 
-      // Grafik per jam (jam 08.00 - 22.00)
       const peta = {};
       l.per_jam.forEach((j) => { peta[j.jam] = Number(j.total); });
       const tertinggi = Math.max(1, ...Object.values(peta));
