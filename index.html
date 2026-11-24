@@ -384,6 +384,7 @@
     let daftarKategori = [];
     let produkDiubah = null;   // menu yang sedang diedit (null = menu baru)
     let produkStok = null;     // menu yang sedang diubah stoknya
+    const antrean = { menu: 0, openbill: 0, produk: 0, laporan: 0 }; // cegah tampilan dobel
 
     const rupiah = (n) => 'Rp' + Number(n || 0).toLocaleString('id-ID');
     const $ = (id) => document.getElementById(id);
@@ -437,10 +438,9 @@
       $('info-staf').textContent = `Masuk sebagai ${staf.nama} (${staf.peran})`;
       document.querySelectorAll('.khusus-owner').forEach((el) => el.classList.toggle('tersembunyi', staf.peran !== 'owner'));
       keranjang = {};
-      pindahTab('pesan');
       muatMeja();
       muatKategori();
-      tampilkanMenu();
+      pindahTab('pesan'); // sudah memuat menu
       hitungOpenBill();
     }
 
@@ -494,9 +494,8 @@
 
     // ================= MENU KASIR =================
     async function tampilkanMenu() {
+      const nomor = ++antrean.menu;
       $('pesan').textContent = 'Memuat menu...';
-      $('daftar').innerHTML = '';
-      semuaProduk = {};
 
       const { data, error } = await db
         .from('kategori')
@@ -505,12 +504,15 @@
         .order('id')
         .order('id', { referencedTable: 'produk' });
 
+      if (nomor !== antrean.menu) return; // ada pemuatan yang lebih baru
       if (error) {
         $('pesan').textContent = 'Gagal memuat menu: ' + error.message;
         return;
       }
 
       $('pesan').textContent = '';
+      $('daftar').innerHTML = '';
+      semuaProduk = {};
       data.forEach((kat) => {
         if (kat.produk.length === 0) return;
         const judul = document.createElement('h2');
@@ -653,8 +655,8 @@
     }
 
     async function tampilkanOpenBill() {
+      const nomor = ++antrean.openbill;
       $('pesan-openbill').textContent = 'Memuat nota...';
-      $('daftar-nota').innerHTML = '';
 
       const { data, error } = await db
         .from('transaksi')
@@ -662,6 +664,8 @@
         .eq('status', 'open')
         .order('id');
 
+      if (nomor !== antrean.openbill) return;
+      $('daftar-nota').innerHTML = '';
       if (error) {
         $('pesan-openbill').textContent = 'Gagal memuat: ' + error.message;
         return;
@@ -758,8 +762,8 @@
 
     // ================= PRODUK & STOK =================
     async function tampilkanProduk() {
+      const nomor = ++antrean.produk;
       $('pesan-produk').textContent = 'Memuat menu...';
-      $('isi-tabel-produk').innerHTML = '';
 
       const { data, error } = await db
         .from('produk')
@@ -768,6 +772,8 @@
         .order('kategori_id')
         .order('id');
 
+      if (nomor !== antrean.produk) return;
+      $('isi-tabel-produk').innerHTML = '';
       if (error) {
         $('pesan-produk').textContent = 'Gagal memuat: ' + error.message;
         return;
@@ -802,12 +808,14 @@
     }
 
     async function tampilkanRiwayatStok() {
+      const nomor = antrean.produk;
       const { data, error } = await db
         .from('log_stok')
         .select('id, created_at, perubahan, stok_setelah, alasan, transaksi_id, produk(nama), staf(nama)')
         .order('id', { ascending: false })
         .limit(10);
 
+      if (nomor !== antrean.produk) return;
       const wadah = $('riwayat-stok');
       wadah.innerHTML = '';
       if (error) { wadah.textContent = 'Gagal memuat riwayat: ' + error.message; return; }
@@ -967,10 +975,12 @@
     }
 
     async function tampilkanLaporan() {
+      const nomor = ++antrean.laporan;
       const { dari, sampai } = rentangTanggal();
       $('pesan-laporan').textContent = 'Menghitung laporan...';
 
       const { data: l, error } = await db.rpc('laporan_penjualan', { p_dari: dari, p_sampai: sampai });
+      if (nomor !== antrean.laporan) return;
       if (error) {
         $('pesan-laporan').textContent = 'Gagal memuat laporan: ' + error.message;
         return;
