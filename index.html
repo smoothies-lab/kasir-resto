@@ -94,7 +94,8 @@
       const { data, error } = await db
         .from('kategori')
         .select('id, nama, produk(id, nama, harga_jual, stok)')
-        .order('id');
+        .order('id')
+        .order('id', { referencedTable: 'produk' });
 
       if (error) {
         pesan.textContent = 'Gagal memuat menu: ' + error.message;
