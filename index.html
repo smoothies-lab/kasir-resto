@@ -131,6 +131,19 @@
     .aksi { display: flex; gap: 6px; justify-content: flex-end; }
     .aksi button { border: 0; border-radius: 10px; padding: 8px 10px; font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; background: #E8EEFD; color: #2F57C9; }
 
+    /* Bayar: pelanggan & diskon */
+    .bagian-bayar { border: 1px solid #E4E8F2; border-radius: 16px; padding: 12px; margin-bottom: 12px; }
+    .bagian-bayar h4 { margin: 0 0 8px; font-size: 13px; }
+    .baris-input { display: flex; gap: 6px; }
+    .baris-input input, .baris-input select { flex: 1; min-width: 0; }
+    .jendela .baris-input .tombol.kecil { height: 46px; flex: none; }
+    .kartu-pelanggan { display: flex; justify-content: space-between; align-items: center; gap: 8px; background: #E8EEFD; color: #2F57C9; border-radius: 12px; padding: 10px 12px; font-size: 14px; }
+    .kartu-pelanggan button { border: 0; background: transparent; color: #2F57C9; font: inherit; font-weight: 700; cursor: pointer; }
+    .rincian-bayar div { display: flex; justify-content: space-between; font-size: 14px; margin-top: 6px; }
+    .rincian-bayar .potong { color: #C2410C; }
+    .rincian-bayar .total { font-size: 17px; font-weight: 800; border-top: 1px solid #E4E8F2; padding-top: 8px; }
+    .catatan-poin { font-size: 12px; color: #15803D; font-weight: 700; margin-top: 6px; }
+
     /* Absen & staf */
     .kanan-header { display: flex; gap: 8px; align-items: center; }
     .tombol-absen { background: #fff; color: #2F57C9; border: 0; border-radius: 12px; padding: 10px 14px; font: inherit; font-weight: 800; cursor: pointer; }
@@ -290,6 +303,8 @@
           <div class="panel">
             <h3>Rincian</h3>
             <div class="baris"><span class="abu">Penjualan</span><span id="r-penjualan">Rp0</span></div>
+            <div class="baris"><span class="abu">Diskon</span><span id="r-diskon">Rp0</span></div>
+            <div class="baris"><span class="abu">Potongan poin</span><span id="r-poin">Rp0</span></div>
             <div class="baris"><span class="abu">Modal barang terjual</span><span id="r-modal">Rp0</span></div>
             <div class="baris tebal"><span>Laba kotor</span><span id="r-laba">Rp0</span></div>
             <div class="baris"><span class="abu">Pajak dipungut (disetor)</span><span id="r-pajak">Rp0</span></div>
@@ -381,6 +396,53 @@
     <div class="jendela">
       <h2 id="judul-bayar">Bayar</h2>
       <div class="besar" id="total-bayar">Rp0</div>
+
+      <div class="bagian-bayar">
+        <h4>Pelanggan (untuk poin) — opsional</h4>
+        <div id="cari-pelanggan">
+          <div class="baris-input">
+            <input id="hp-pelanggan" type="tel" inputmode="numeric" placeholder="Nomor HP, misal 0812...">
+            <button class="tombol kecil" id="tombol-cari-pelanggan">Cari</button>
+          </div>
+          <div id="daftar-pelanggan-baru" class="tersembunyi">
+            <p class="sub" style="margin: 8px 0 6px;">Nomor ini belum terdaftar. Daftarkan sekarang?</p>
+            <div class="baris-input">
+              <input id="nama-pelanggan" type="text" placeholder="Nama pelanggan">
+              <button class="tombol kecil" id="tombol-daftar-pelanggan">Daftarkan</button>
+            </div>
+          </div>
+        </div>
+        <div id="pelanggan-terpilih" class="tersembunyi">
+          <div class="kartu-pelanggan">
+            <span><b id="nama-terpilih"></b> · <span id="poin-terpilih"></span></span>
+            <button id="tombol-lepas-pelanggan">Ganti</button>
+          </div>
+          <label for="poin-dipakai">Pakai poin (1 poin = Rp100)</label>
+          <input id="poin-dipakai" type="number" inputmode="numeric" min="0" value="0">
+        </div>
+      </div>
+
+      <div class="bagian-bayar">
+        <h4>Diskon — opsional</h4>
+        <div class="baris-input">
+          <select id="jenis-diskon">
+            <option value="">Tanpa diskon</option>
+            <option value="persen">Persen (%)</option>
+            <option value="rupiah">Rupiah (Rp)</option>
+          </select>
+          <input id="nilai-diskon" type="number" inputmode="numeric" min="0" placeholder="0" disabled>
+        </div>
+      </div>
+
+      <div class="rincian-bayar" style="margin-bottom: 12px;">
+        <div><span>Subtotal</span><span id="b-subtotal">Rp0</span></div>
+        <div class="potong" id="baris-b-diskon"><span>Diskon</span><span id="b-diskon">−Rp0</span></div>
+        <div class="potong" id="baris-b-poin"><span>Potongan poin</span><span id="b-poin">−Rp0</span></div>
+        <div><span>Pajak 10%</span><span id="b-pajak">Rp0</span></div>
+        <div class="total"><span>Total</span><span id="b-total">Rp0</span></div>
+        <div class="catatan-poin" id="b-poin-didapat"></div>
+      </div>
+
       <div class="metode" id="pilih-metode">
         <button data-metode="tunai" class="aktif">Tunai</button>
         <button data-metode="qris">QRIS</button>
@@ -774,7 +836,7 @@
 
       const { data, error } = await db
         .from('transaksi')
-        .select('id, created_at, tipe_pesanan, total, meja(nomor), detail_transaksi(nama_produk, qty, harga_jual)')
+        .select('id, created_at, tipe_pesanan, subtotal, total, meja(nomor), detail_transaksi(nama_produk, qty, harga_jual)')
         .eq('status', 'open')
         .order('id');
 
@@ -819,14 +881,22 @@
     }
 
     // ================= BAYAR =================
+    const RUPIAH_PER_POIN = 100;      // harus sama dengan di database
+    const BELANJA_PER_POIN = 10000;
+    let pelangganDipilih = null;      // { id, nama, no_hp, poin }
+    let tagihan = { total: 0 };
+
     function bukaJendelaBayar(nota) {
       notaDibayar = nota;
       $('judul-bayar').textContent = `Bayar Nota #${nota.id}`;
-      $('total-bayar').textContent = rupiah(nota.total);
       $('uang').value = '';
-      $('kembalian').textContent = 'Rp0';
+      $('jenis-diskon').value = '';
+      $('nilai-diskon').value = '';
+      $('nilai-diskon').disabled = true;
+      lepasPelanggan();
       tampilkanInfo($('info-bayar'), '');
       pilihMetode('tunai');
+      hitungTagihan();
       $('jendela-bayar').classList.remove('tersembunyi');
     }
 
@@ -835,6 +905,98 @@
       notaDibayar = null;
     }
 
+    // Rumus ini sama dengan resep bayar_pesanan di database (database tetap yang menentukan)
+    function hitungTagihan() {
+      if (!notaDibayar) return;
+      const subtotal = notaDibayar.subtotal;
+      const jenis = $('jenis-diskon').value;
+      const nilai = Number($('nilai-diskon').value || 0);
+      let diskon = 0;
+      if (jenis === 'persen') diskon = Math.round(subtotal * Math.min(Math.max(nilai, 0), 100) / 100);
+      if (jenis === 'rupiah') diskon = Math.min(Math.max(nilai, 0), subtotal);
+
+      let poin = 0;
+      if (pelangganDipilih) {
+        const maksPoin = Math.min(pelangganDipilih.poin, Math.floor((subtotal - diskon) / RUPIAH_PER_POIN));
+        $('poin-dipakai').max = maksPoin;
+        poin = Math.min(Math.max(Math.floor(Number($('poin-dipakai').value || 0)), 0), maksPoin);
+      }
+      const potongan = poin * RUPIAH_PER_POIN;
+      const dasar = subtotal - diskon - potongan;
+      const pajak = Math.round(dasar / 10);
+      const total = dasar + pajak;
+      tagihan = { jenis, nilai, poin, total };
+
+      $('b-subtotal').textContent = rupiah(subtotal);
+      $('b-diskon').textContent = '−' + rupiah(diskon);
+      $('baris-b-diskon').classList.toggle('tersembunyi', diskon === 0);
+      $('b-poin').textContent = '−' + rupiah(potongan) + ` (${poin} poin)`;
+      $('baris-b-poin').classList.toggle('tersembunyi', potongan === 0);
+      $('b-pajak').textContent = rupiah(pajak);
+      $('b-total').textContent = rupiah(total);
+      $('total-bayar').textContent = rupiah(total);
+      $('b-poin-didapat').textContent = pelangganDipilih
+        ? `${pelangganDipilih.nama} akan dapat +${Math.floor(dasar / BELANJA_PER_POIN)} poin` : '';
+      hitungKembalian();
+    }
+
+    $('jenis-diskon').onchange = () => {
+      $('nilai-diskon').disabled = !$('jenis-diskon').value;
+      if (!$('jenis-diskon').value) $('nilai-diskon').value = '';
+      $('nilai-diskon').placeholder = $('jenis-diskon').value === 'persen' ? 'misal 10' : 'misal 5000';
+      hitungTagihan();
+    };
+    $('nilai-diskon').oninput = hitungTagihan;
+    $('poin-dipakai').oninput = hitungTagihan;
+
+    // ----- Pelanggan -----
+    const hanyaAngka = (t) => (t || '').replace(/\D/g, '');
+
+    function pilihPelanggan(p) {
+      pelangganDipilih = p;
+      $('nama-terpilih').textContent = p.nama;
+      $('poin-terpilih').textContent = `${p.poin} poin`;
+      $('poin-dipakai').value = 0;
+      $('cari-pelanggan').classList.add('tersembunyi');
+      $('pelanggan-terpilih').classList.remove('tersembunyi');
+      hitungTagihan();
+    }
+
+    function lepasPelanggan() {
+      pelangganDipilih = null;
+      $('hp-pelanggan').value = '';
+      $('nama-pelanggan').value = '';
+      $('poin-dipakai').value = 0;
+      $('daftar-pelanggan-baru').classList.add('tersembunyi');
+      $('cari-pelanggan').classList.remove('tersembunyi');
+      $('pelanggan-terpilih').classList.add('tersembunyi');
+      hitungTagihan();
+    }
+    $('tombol-lepas-pelanggan').onclick = lepasPelanggan;
+
+    $('tombol-cari-pelanggan').onclick = async () => {
+      const hp = hanyaAngka($('hp-pelanggan').value);
+      if (hp.length < 9) { tampilkanInfo($('info-bayar'), 'Nomor HP terlalu pendek.', 'gagal'); return; }
+      tampilkanInfo($('info-bayar'), 'Mencari pelanggan...');
+      const { data, error } = await db.from('pelanggan').select('id, nama, no_hp, poin').eq('no_hp', hp).maybeSingle();
+      if (error) { tampilkanInfo($('info-bayar'), 'Gagal mencari: ' + error.message, 'gagal'); return; }
+      tampilkanInfo($('info-bayar'), '');
+      if (data) pilihPelanggan(data);
+      else $('daftar-pelanggan-baru').classList.remove('tersembunyi');
+    };
+    $('hp-pelanggan').onkeydown = (e) => { if (e.key === 'Enter') $('tombol-cari-pelanggan').click(); };
+
+    $('tombol-daftar-pelanggan').onclick = async () => {
+      const nama = $('nama-pelanggan').value.trim();
+      const hp = hanyaAngka($('hp-pelanggan').value);
+      if (!nama) { tampilkanInfo($('info-bayar'), 'Isi nama pelanggan dulu.', 'gagal'); return; }
+      const { data: id, error } = await db.rpc('simpan_pelanggan', { p_nama: nama, p_no_hp: hp });
+      if (error) { tampilkanInfo($('info-bayar'), error.message, 'gagal'); return; }
+      tampilkanInfo($('info-bayar'), 'Pelanggan baru terdaftar 👍', 'sukses');
+      pilihPelanggan({ id, nama, no_hp: hp, poin: 0 });
+    };
+
+    // ----- Metode & kembalian -----
     function pilihMetode(metode) {
       metodeBayar = metode;
       document.querySelectorAll('#pilih-metode button').forEach((b) => b.classList.toggle('aktif', b.dataset.metode === metode));
@@ -845,23 +1007,30 @@
       b.onclick = () => pilihMetode(b.dataset.metode);
     });
 
-    $('uang').oninput = () => {
-      const kembali = Number($('uang').value || 0) - notaDibayar.total;
+    function hitungKembalian() {
+      if (!$('uang').value) { $('kembalian').textContent = 'Rp0'; return; }
+      const kembali = Number($('uang').value) - tagihan.total;
       $('kembalian').textContent = kembali >= 0 ? rupiah(kembali) : 'Uang kurang';
-    };
+    }
+    $('uang').oninput = hitungKembalian;
 
     $('tombol-batal').onclick = tutupJendelaBayar;
 
     $('tombol-konfirmasi').onclick = async () => {
-      if (metodeBayar === 'tunai' && Number($('uang').value || 0) < notaDibayar.total) {
+      hitungTagihan();
+      if (metodeBayar === 'tunai' && Number($('uang').value || 0) < tagihan.total) {
         tampilkanInfo($('info-bayar'), 'Uang yang diterima kurang dari total.', 'gagal');
         return;
       }
 
       $('tombol-konfirmasi').disabled = true;
-      const { error } = await db.rpc('bayar_pesanan', {
+      const { data: hasil, error } = await db.rpc('bayar_pesanan', {
         p_transaksi_id: notaDibayar.id,
         p_metode: metodeBayar,
+        p_diskon_jenis: tagihan.jenis || null,
+        p_diskon_nilai: tagihan.jenis ? tagihan.nilai : 0,
+        p_pelanggan_id: pelangganDipilih ? pelangganDipilih.id : null,
+        p_poin_dipakai: tagihan.poin,
       });
       $('tombol-konfirmasi').disabled = false;
 
@@ -870,8 +1039,11 @@
         return;
       }
 
+      const nama = pelangganDipilih ? pelangganDipilih.nama : null;
       tutupJendelaBayar();
-      tampilkanOpenBill();
+      await tampilkanOpenBill();
+      $('pesan-openbill').textContent = `Nota lunas ${rupiah(hasil.total)}` +
+        (nama ? ` · ${nama} dapat +${hasil.poin_didapat} poin (sekarang ${hasil.poin_sisa} poin)` : '');
     };
 
     // ================= PRODUK & STOK =================
@@ -1111,6 +1283,8 @@
       $('l-rata').textContent = `Rata-rata ${rupiah(rata)} per nota`;
 
       $('r-penjualan').textContent = rupiah(l.penjualan);
+      $('r-diskon').textContent = '−' + rupiah(l.diskon);
+      $('r-poin').textContent = '−' + rupiah(l.potongan_poin);
       $('r-modal').textContent = '−' + rupiah(l.modal);
       $('r-laba').textContent = rupiah(l.laba_kotor);
       $('r-pajak').textContent = rupiah(l.pajak);
