@@ -966,3 +966,10 @@ $('form-pengaturan').onsubmit = async (e) => {
   await muatPengaturan();
   tampilkanInfo($('info-pengaturan'), 'Pengaturan tersimpan 👍', 'sukses');
 };
+
+// ================= BISA DI-INSTALL (PWA) =================
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch((err) => console.warn('Service worker gagal:', err));
+  });
+}
