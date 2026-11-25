@@ -1,0 +1,968 @@
+// Logika aplikasi Kasir Resto (Tingkat 1)
+const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// Pengaturan toko (diisi dari database saat login)
+let atur = { nama_toko: 'Kasir Resto', pajak_persen: 10, layanan_persen: 0, belanja_per_poin: 10000, rupiah_per_poin: 100 };
+
+// Rumus sama dengan di database: layanan dari dasar, pajak dari (dasar + layanan)
+function hitungPajakLayanan(dasar) {
+  const layanan = Math.round(dasar * Number(atur.layanan_persen) / 100);
+  const pajak = Math.round((dasar + layanan) * Number(atur.pajak_persen) / 100);
+  return { layanan, pajak, total: dasar + layanan + pajak };
+}
+
+async function muatPengaturan() {
+  const { data } = await db.from('pengaturan_toko').select('*').eq('id', 1).maybeSingle();
+  if (data) atur = data;
+  $('nama-toko').textContent = atur.nama_toko;
+  document.title = atur.nama_toko;
+  const persen = (n) => Number(n).toLocaleString('id-ID') + '%';
+  $('label-pajak').textContent = `Pajak (${persen(atur.pajak_persen)})`;
+  $('label-layanan').textContent = `Biaya layanan (${persen(atur.layanan_persen)})`;
+  $('baris-layanan').classList.toggle('tersembunyi', Number(atur.layanan_persen) === 0);
+  $('b-label-pajak').textContent = `Pajak ${persen(atur.pajak_persen)}`;
+  $('b-label-layanan').textContent = `Biaya layanan ${persen(atur.layanan_persen)}`;
+  $('label-poin-dipakai').textContent = `Pakai poin (1 poin = ${rupiah(atur.rupiah_per_poin)})`;
+  gambarKeranjang();
+}
+let semuaProduk = {};
+let keranjang = {};
+let tipePesanan = 'makan_di_sini';
+let notaDibayar = null;
+let metodeBayar = 'tunai';
+let periodeLaporan = 'hari';
+let daftarKategori = [];
+let produkDiubah = null;   // menu yang sedang diedit (null = menu baru)
+let produkStok = null;     // menu yang sedang diubah stoknya
+const antrean = { menu: 0, openbill: 0, produk: 0, laporan: 0, staf: 0, absensi: 0 }; // cegah tampilan dobel
+let periodeAbsen = 'hari';
+
+const rupiah = (n) => 'Rp' + Number(n || 0).toLocaleString('id-ID');
+const $ = (id) => document.getElementById(id);
+const NAMA_TIPE = { makan_di_sini: 'Makan di sini', bawa_pulang: 'Bawa pulang', pesan_antar: 'Pesan antar' };
+const NAMA_METODE = { tunai: 'Tunai', qris: 'QRIS', transfer: 'Transfer' };
+const NAMA_ALASAN = { penjualan: 'Penjualan', tambah_stok: 'Tambah stok', rusak: 'Rusak / terbuang', koreksi: 'Koreksi' };
+const tanggalLokal = (d) => d.toLocaleDateString('sv-SE');
+
+function tampilkanInfo(el, teks, jenis) {
+  el.className = 'info-jendela ' + (jenis || '');
+  el.textContent = teks;
+}
+
+// ================= LOGIN & LOGOUT =================
+$('form-login').onsubmit = async (e) => {
+  e.preventDefault();
+  $('tombol-masuk').disabled = true;
+  $('pesan-login').textContent = '';
+  const { error } = await db.auth.signInWithPassword({
+    email: $('email').value.trim(),
+    password: $('password').value,
+  });
+  $('tombol-masuk').disabled = false;
+  if (error) $('pesan-login').textContent = 'Email atau password salah.';
+};
+
+$('tombol-keluar').onclick = () => db.auth.signOut();
+
+// Siapa yang sedang login. Dipakai agar tampilan tidak di-reset
+// setiap kali Supabase mengecek ulang login (misalnya saat pindah tab browser).
+let idPenggunaAktif = null;
+
+db.auth.onAuthStateChange((event, session) => {
+  setTimeout(() => {
+    if (!session) {
+      idPenggunaAktif = null;
+      bukaLogin();
+      return;
+    }
+    if (session.user.id === idPenggunaAktif) return; // orangnya sama, biarkan tampilan apa adanya
+    idPenggunaAktif = session.user.id;
+    bukaKasir(session.user);
+  }, 0);
+});
+
+function bukaLogin() {
+  $('halaman-kasir').classList.add('tersembunyi');
+  $('halaman-login').classList.remove('tersembunyi');
+  $('password').value = '';
+}
+
+async function bukaKasir(user) {
+  const { data: staf } = await db.from('staf').select('nama, peran').eq('id', user.id).maybeSingle();
+  if (!staf) {
+    $('pesan-login').textContent = 'Akun ini belum terdaftar sebagai staf.';
+    idPenggunaAktif = null;
+    await db.auth.signOut();
+    return;
+  }
+  $('halaman-login').classList.add('tersembunyi');
+  $('halaman-kasir').classList.remove('tersembunyi');
+  $('info-staf').textContent = `Masuk sebagai ${staf.nama} (${staf.peran})`;
+  document.querySelectorAll('.khusus-owner').forEach((el) => el.classList.toggle('tersembunyi', staf.peran !== 'owner'));
+  keranjang = {};
+  await muatPengaturan();
+  muatMeja();
+  muatKategori();
+  pindahTab('pesan'); // sudah memuat menu
+  hitungOpenBill();
+  cekAbsen();
+}
+
+// ================= ABSEN MASUK / PULANG =================
+let sedangMasuk = false;
+const jam = (t) => new Date(t).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+
+async function cekAbsen() {
+  const { data } = await db.from('absensi').select('masuk_at')
+    .eq('staf_id', idPenggunaAktif).is('pulang_at', null).maybeSingle();
+  sedangMasuk = !!data;
+  $('tombol-absen').textContent = sedangMasuk ? 'Absen pulang' : 'Absen masuk';
+  $('tombol-absen').classList.toggle('pulang', sedangMasuk);
+  $('status-absen').textContent = sedangMasuk ? `Sudah absen masuk pukul ${jam(data.masuk_at)}` : 'Belum absen masuk';
+}
+
+$('tombol-absen').onclick = async () => {
+  const yakin = confirm(sedangMasuk ? 'Absen pulang sekarang?' : 'Absen masuk sekarang?');
+  if (!yakin) return;
+  $('tombol-absen').disabled = true;
+  const { error } = await db.rpc(sedangMasuk ? 'absen_pulang' : 'absen_masuk');
+  $('tombol-absen').disabled = false;
+  if (error) alert('Gagal absen: ' + error.message);
+  await cekAbsen();
+  if (!$('tampilan-staf').classList.contains('tersembunyi')) { tampilkanStaf(); tampilkanAbsensi(); }
+};
+
+// ================= TAB =================
+function pindahTab(nama) {
+  ['pesan', 'openbill', 'produk', 'laporan', 'staf', 'pengaturan'].forEach((t) => {
+    $('tab-' + t).classList.toggle('aktif', t === nama);
+    $('tampilan-' + t).classList.toggle('tersembunyi', t !== nama);
+  });
+  if (nama === 'pesan') tampilkanMenu();
+  if (nama === 'openbill') tampilkanOpenBill();
+  if (nama === 'produk') tampilkanProduk();
+  if (nama === 'laporan') tampilkanLaporan();
+  if (nama === 'staf') { tampilkanStaf(); tampilkanAbsensi(); }
+  if (nama === 'pengaturan') isiFormPengaturan();
+}
+['pesan', 'openbill', 'produk', 'laporan', 'staf', 'pengaturan'].forEach((t) => {
+  $('tab-' + t).onclick = () => pindahTab(t);
+});
+
+// ================= MEJA, KATEGORI & TIPE =================
+async function muatMeja() {
+  const { data } = await db.from('meja').select('id, nomor').order('id');
+  const select = $('meja');
+  select.innerHTML = '<option value="">-- Pilih meja --</option>';
+  (data || []).forEach((m) => {
+    const opsi = document.createElement('option');
+    opsi.value = m.id;
+    opsi.textContent = 'Meja ' + m.nomor;
+    select.appendChild(opsi);
+  });
+}
+
+async function muatKategori() {
+  const { data } = await db.from('kategori').select('id, nama').order('id');
+  daftarKategori = data || [];
+  $('p-kategori').innerHTML = '';
+  daftarKategori.forEach((k) => {
+    const opsi = document.createElement('option');
+    opsi.value = k.id;
+    opsi.textContent = k.nama;
+    $('p-kategori').appendChild(opsi);
+  });
+}
+
+document.querySelectorAll('#pilih-tipe button').forEach((tombol) => {
+  tombol.onclick = () => {
+    tipePesanan = tombol.dataset.tipe;
+    document.querySelectorAll('#pilih-tipe button').forEach((b) => b.classList.toggle('aktif', b === tombol));
+    $('bagian-meja').classList.toggle('tersembunyi', tipePesanan !== 'makan_di_sini');
+  };
+});
+
+// ================= MENU KASIR =================
+async function tampilkanMenu() {
+  const nomor = ++antrean.menu;
+  $('pesan').textContent = 'Memuat menu...';
+
+  const { data, error } = await db
+    .from('kategori')
+    .select('id, nama, produk(id, nama, harga_jual, stok, aktif)')
+    .eq('produk.aktif', true)
+    .order('id')
+    .order('id', { referencedTable: 'produk' });
+
+  if (nomor !== antrean.menu) return; // ada pemuatan yang lebih baru
+  if (error) {
+    $('pesan').textContent = 'Gagal memuat menu: ' + error.message;
+    return;
+  }
+
+  $('pesan').textContent = '';
+  $('daftar').innerHTML = '';
+  semuaProduk = {};
+  data.forEach((kat) => {
+    if (kat.produk.length === 0) return;
+    const judul = document.createElement('h2');
+    judul.textContent = kat.nama;
+    $('daftar').appendChild(judul);
+
+    const grid = document.createElement('div');
+    grid.className = 'grid';
+    kat.produk.forEach((p) => {
+      semuaProduk[p.id] = p;
+      const kartu = document.createElement('button');
+      kartu.className = 'kartu';
+      kartu.dataset.id = p.id;
+      kartu.disabled = p.stok <= 0;
+      kartu.innerHTML = `
+        <div class="nama"></div>
+        <div class="harga">${rupiah(p.harga_jual)}</div>
+        <div class="stok">${p.stok > 0 ? 'Stok: ' + p.stok : 'Stok habis'}</div>`;
+      kartu.querySelector('.nama').textContent = p.nama;
+      kartu.onclick = () => tambah(p.id);
+      grid.appendChild(kartu);
+    });
+    $('daftar').appendChild(grid);
+  });
+
+  // buang isi keranjang yang menunya sudah tidak tersedia
+  Object.keys(keranjang).forEach((id) => {
+    if (!semuaProduk[id]) delete keranjang[id];
+    else if (keranjang[id] > semuaProduk[id].stok) keranjang[id] = semuaProduk[id].stok;
+    if (keranjang[id] <= 0) delete keranjang[id];
+  });
+  gambarKeranjang();
+}
+
+// ================= KERANJANG =================
+function tambah(id) {
+  const jumlah = keranjang[id] || 0;
+  if (jumlah >= semuaProduk[id].stok) return;
+  keranjang[id] = jumlah + 1;
+  gambarKeranjang();
+}
+
+function kurang(id) {
+  keranjang[id] = keranjang[id] - 1;
+  if (keranjang[id] <= 0) delete keranjang[id];
+  gambarKeranjang();
+}
+
+function gambarKeranjang() {
+  const isi = $('isi-keranjang');
+  isi.innerHTML = '';
+  let subtotal = 0;
+  let jumlahItem = 0;
+  const daftarId = Object.keys(keranjang);
+
+  if (daftarId.length === 0) {
+    isi.innerHTML = '<p class="kosong">Belum ada menu. Klik menu untuk menambahkan.</p>';
+  }
+
+  daftarId.forEach((id) => {
+    const p = semuaProduk[id];
+    const qty = keranjang[id];
+    subtotal += p.harga_jual * qty;
+    jumlahItem += qty;
+
+    const baris = document.createElement('div');
+    baris.className = 'item';
+    baris.innerHTML = `
+      <div class="item-info">
+        <div class="item-nama"></div>
+        <div class="item-harga">${qty} × ${rupiah(p.harga_jual)}</div>
+      </div>
+      <div class="qty">
+        <button aria-label="Kurangi">−</button>
+        <span>${qty}</span>
+        <button aria-label="Tambah">+</button>
+      </div>`;
+    baris.querySelector('.item-nama').textContent = p.nama;
+    const tombol = baris.querySelectorAll('.qty button');
+    tombol[0].onclick = () => kurang(id);
+    tombol[1].onclick = () => tambah(id);
+    isi.appendChild(baris);
+  });
+
+  const { layanan, pajak, total } = hitungPajakLayanan(subtotal);
+  $('subtotal').textContent = rupiah(subtotal);
+  $('layanan').textContent = rupiah(layanan);
+  $('pajak').textContent = rupiah(pajak);
+  $('total').textContent = rupiah(total);
+  $('bar-info').textContent = jumlahItem + ' item';
+  $('bar-total').textContent = rupiah(total);
+  $('tombol-simpan').disabled = daftarId.length === 0;
+
+  document.querySelectorAll('.kartu').forEach((k) => {
+    k.classList.toggle('dipilih', Boolean(keranjang[k.dataset.id]));
+  });
+}
+
+// ================= SIMPAN PESANAN =================
+$('tombol-simpan').onclick = async () => {
+  const info = $('info');
+  info.className = '';
+  const mejaId = $('meja').value ? Number($('meja').value) : null;
+
+  if (tipePesanan === 'makan_di_sini' && !mejaId) {
+    info.className = 'gagal';
+    info.textContent = 'Pilih meja dulu ya.';
+    return;
+  }
+
+  const items = Object.keys(keranjang).map((id) => ({ produk_id: Number(id), qty: keranjang[id] }));
+  $('tombol-simpan').disabled = true;
+  info.textContent = 'Menyimpan...';
+
+  const { data: nomorNota, error } = await db.rpc('simpan_pesanan', {
+    p_meja_id: mejaId,
+    p_tipe: tipePesanan,
+    p_items: items,
+  });
+
+  if (error) {
+    info.className = 'gagal';
+    info.textContent = 'Gagal menyimpan: ' + error.message;
+    $('tombol-simpan').disabled = false;
+    return;
+  }
+
+  info.className = 'sukses';
+  info.textContent = `Pesanan #${nomorNota} tersimpan ✅`;
+  keranjang = {};
+  $('meja').value = '';
+  tampilkanMenu();
+  hitungOpenBill();
+};
+
+// ================= OPEN BILL =================
+async function hitungOpenBill() {
+  const { count } = await db.from('transaksi').select('id', { count: 'exact', head: true }).eq('status', 'open');
+  $('tab-openbill').textContent = `Open bill (${count || 0})`;
+}
+
+async function tampilkanOpenBill() {
+  const nomor = ++antrean.openbill;
+  $('pesan-openbill').textContent = 'Memuat nota...';
+
+  const { data, error } = await db
+    .from('transaksi')
+    .select('id, created_at, tipe_pesanan, subtotal, total, meja(nomor), detail_transaksi(nama_produk, qty, harga_jual)')
+    .eq('status', 'open')
+    .order('id');
+
+  if (nomor !== antrean.openbill) return;
+  $('daftar-nota').innerHTML = '';
+  if (error) {
+    $('pesan-openbill').textContent = 'Gagal memuat: ' + error.message;
+    return;
+  }
+
+  $('tab-openbill').textContent = `Open bill (${data.length})`;
+  $('pesan-openbill').textContent = data.length === 0 ? 'Semua nota sudah dibayar 🎉' : '';
+
+  data.forEach((n) => {
+    const jam = new Date(n.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+    const tempat = n.meja ? 'Meja ' + n.meja.nomor : NAMA_TIPE[n.tipe_pesanan];
+
+    const kartu = document.createElement('div');
+    kartu.className = 'nota';
+    kartu.innerHTML = `
+      <div class="nota-atas">
+        <span class="nota-judul">Nota #${n.id}</span>
+        <span class="nota-waktu">${jam}</span>
+      </div>
+      <span class="label"></span>
+      <div class="nota-isi"></div>
+      <div class="nota-total"><span>Total</span><span>${rupiah(n.total)}</span></div>
+      <button class="tombol">Bayar</button>`;
+    kartu.querySelector('.label').textContent = tempat;
+
+    const isi = kartu.querySelector('.nota-isi');
+    n.detail_transaksi.forEach((d) => {
+      const baris = document.createElement('div');
+      baris.innerHTML = `<span></span><span>${rupiah(d.harga_jual * d.qty)}</span>`;
+      baris.querySelector('span').textContent = `${d.qty}× ${d.nama_produk}`;
+      isi.appendChild(baris);
+    });
+
+    kartu.querySelector('.tombol').onclick = () => bukaJendelaBayar(n);
+    $('daftar-nota').appendChild(kartu);
+  });
+}
+
+// ================= BAYAR =================
+let pelangganDipilih = null;      // { id, nama, no_hp, poin }
+let tagihan = { total: 0 };
+
+function bukaJendelaBayar(nota) {
+  notaDibayar = nota;
+  $('judul-bayar').textContent = `Bayar Nota #${nota.id}`;
+  $('uang').value = '';
+  $('jenis-diskon').value = '';
+  $('nilai-diskon').value = '';
+  $('nilai-diskon').disabled = true;
+  lepasPelanggan();
+  tampilkanInfo($('info-bayar'), '');
+  pilihMetode('tunai');
+  hitungTagihan();
+  $('jendela-bayar').classList.remove('tersembunyi');
+}
+
+function tutupJendelaBayar() {
+  $('jendela-bayar').classList.add('tersembunyi');
+  notaDibayar = null;
+}
+
+// Rumus ini sama dengan resep bayar_pesanan di database (database tetap yang menentukan)
+function hitungTagihan() {
+  if (!notaDibayar) return;
+  const subtotal = notaDibayar.subtotal;
+  const jenis = $('jenis-diskon').value;
+  const nilai = Number($('nilai-diskon').value || 0);
+  let diskon = 0;
+  if (jenis === 'persen') diskon = Math.round(subtotal * Math.min(Math.max(nilai, 0), 100) / 100);
+  if (jenis === 'rupiah') diskon = Math.min(Math.max(nilai, 0), subtotal);
+
+  let poin = 0;
+  if (pelangganDipilih) {
+    const maksPoin = Math.min(pelangganDipilih.poin, Math.floor((subtotal - diskon) / atur.rupiah_per_poin));
+    $('poin-dipakai').max = maksPoin;
+    poin = Math.min(Math.max(Math.floor(Number($('poin-dipakai').value || 0)), 0), maksPoin);
+  }
+  const potongan = poin * atur.rupiah_per_poin;
+  const dasar = subtotal - diskon - potongan;
+  const { layanan, pajak, total } = hitungPajakLayanan(dasar);
+  tagihan = { jenis, nilai, poin, total };
+
+  $('b-subtotal').textContent = rupiah(subtotal);
+  $('b-diskon').textContent = '−' + rupiah(diskon);
+  $('baris-b-diskon').classList.toggle('tersembunyi', diskon === 0);
+  $('b-poin').textContent = '−' + rupiah(potongan) + ` (${poin} poin)`;
+  $('baris-b-poin').classList.toggle('tersembunyi', potongan === 0);
+  $('b-layanan').textContent = rupiah(layanan);
+  $('baris-b-layanan').classList.toggle('tersembunyi', layanan === 0);
+  $('b-pajak').textContent = rupiah(pajak);
+  $('b-total').textContent = rupiah(total);
+  $('total-bayar').textContent = rupiah(total);
+  $('b-poin-didapat').textContent = pelangganDipilih
+    ? `${pelangganDipilih.nama} akan dapat +${Math.floor(dasar / atur.belanja_per_poin)} poin` : '';
+  hitungKembalian();
+}
+
+$('jenis-diskon').onchange = () => {
+  $('nilai-diskon').disabled = !$('jenis-diskon').value;
+  if (!$('jenis-diskon').value) $('nilai-diskon').value = '';
+  $('nilai-diskon').placeholder = $('jenis-diskon').value === 'persen' ? 'misal 10' : 'misal 5000';
+  hitungTagihan();
+};
+$('nilai-diskon').oninput = hitungTagihan;
+$('poin-dipakai').oninput = hitungTagihan;
+
+// ----- Pelanggan -----
+const hanyaAngka = (t) => (t || '').replace(/\D/g, '');
+
+function pilihPelanggan(p) {
+  pelangganDipilih = p;
+  $('nama-terpilih').textContent = p.nama;
+  $('poin-terpilih').textContent = `${p.poin} poin`;
+  $('poin-dipakai').value = 0;
+  $('cari-pelanggan').classList.add('tersembunyi');
+  $('pelanggan-terpilih').classList.remove('tersembunyi');
+  hitungTagihan();
+}
+
+function lepasPelanggan() {
+  pelangganDipilih = null;
+  $('hp-pelanggan').value = '';
+  $('nama-pelanggan').value = '';
+  $('poin-dipakai').value = 0;
+  $('daftar-pelanggan-baru').classList.add('tersembunyi');
+  $('cari-pelanggan').classList.remove('tersembunyi');
+  $('pelanggan-terpilih').classList.add('tersembunyi');
+  hitungTagihan();
+}
+$('tombol-lepas-pelanggan').onclick = lepasPelanggan;
+
+$('tombol-cari-pelanggan').onclick = async () => {
+  const hp = hanyaAngka($('hp-pelanggan').value);
+  if (hp.length < 9) { tampilkanInfo($('info-bayar'), 'Nomor HP terlalu pendek.', 'gagal'); return; }
+  tampilkanInfo($('info-bayar'), 'Mencari pelanggan...');
+  const { data, error } = await db.from('pelanggan').select('id, nama, no_hp, poin').eq('no_hp', hp).maybeSingle();
+  if (error) { tampilkanInfo($('info-bayar'), 'Gagal mencari: ' + error.message, 'gagal'); return; }
+  tampilkanInfo($('info-bayar'), '');
+  if (data) pilihPelanggan(data);
+  else $('daftar-pelanggan-baru').classList.remove('tersembunyi');
+};
+$('hp-pelanggan').onkeydown = (e) => { if (e.key === 'Enter') $('tombol-cari-pelanggan').click(); };
+
+$('tombol-daftar-pelanggan').onclick = async () => {
+  const nama = $('nama-pelanggan').value.trim();
+  const hp = hanyaAngka($('hp-pelanggan').value);
+  if (!nama) { tampilkanInfo($('info-bayar'), 'Isi nama pelanggan dulu.', 'gagal'); return; }
+  const { data: id, error } = await db.rpc('simpan_pelanggan', { p_nama: nama, p_no_hp: hp });
+  if (error) { tampilkanInfo($('info-bayar'), error.message, 'gagal'); return; }
+  tampilkanInfo($('info-bayar'), 'Pelanggan baru terdaftar 👍', 'sukses');
+  pilihPelanggan({ id, nama, no_hp: hp, poin: 0 });
+};
+
+// ----- Metode & kembalian -----
+function pilihMetode(metode) {
+  metodeBayar = metode;
+  document.querySelectorAll('#pilih-metode button').forEach((b) => b.classList.toggle('aktif', b.dataset.metode === metode));
+  $('bagian-tunai').classList.toggle('tersembunyi', metode !== 'tunai');
+}
+
+document.querySelectorAll('#pilih-metode button').forEach((b) => {
+  b.onclick = () => pilihMetode(b.dataset.metode);
+});
+
+function hitungKembalian() {
+  if (!$('uang').value) { $('kembalian').textContent = 'Rp0'; return; }
+  const kembali = Number($('uang').value) - tagihan.total;
+  $('kembalian').textContent = kembali >= 0 ? rupiah(kembali) : 'Uang kurang';
+}
+$('uang').oninput = hitungKembalian;
+
+$('tombol-batal').onclick = tutupJendelaBayar;
+
+$('tombol-konfirmasi').onclick = async () => {
+  hitungTagihan();
+  if (metodeBayar === 'tunai' && Number($('uang').value || 0) < tagihan.total) {
+    tampilkanInfo($('info-bayar'), 'Uang yang diterima kurang dari total.', 'gagal');
+    return;
+  }
+
+  $('tombol-konfirmasi').disabled = true;
+  const { data: hasil, error } = await db.rpc('bayar_pesanan', {
+    p_transaksi_id: notaDibayar.id,
+    p_metode: metodeBayar,
+    p_diskon_jenis: tagihan.jenis || null,
+    p_diskon_nilai: tagihan.jenis ? tagihan.nilai : 0,
+    p_pelanggan_id: pelangganDipilih ? pelangganDipilih.id : null,
+    p_poin_dipakai: tagihan.poin,
+  });
+  $('tombol-konfirmasi').disabled = false;
+
+  if (error) {
+    tampilkanInfo($('info-bayar'), 'Gagal: ' + error.message, 'gagal');
+    return;
+  }
+
+  const nama = pelangganDipilih ? pelangganDipilih.nama : null;
+  tutupJendelaBayar();
+  await tampilkanOpenBill();
+  $('pesan-openbill').textContent = `Nota lunas ${rupiah(hasil.total)}` +
+    (nama ? ` · ${nama} dapat +${hasil.poin_didapat} poin (sekarang ${hasil.poin_sisa} poin)` : '');
+};
+
+// ================= PRODUK & STOK =================
+async function tampilkanProduk() {
+  const nomor = ++antrean.produk;
+  $('pesan-produk').textContent = 'Memuat menu...';
+
+  const { data, error } = await db
+    .from('produk')
+    .select('id, nama, kategori_id, harga_jual, harga_modal, stok, aktif, kategori(nama)')
+    .order('aktif', { ascending: false })
+    .order('kategori_id')
+    .order('id');
+
+  if (nomor !== antrean.produk) return;
+  $('isi-tabel-produk').innerHTML = '';
+  if (error) {
+    $('pesan-produk').textContent = 'Gagal memuat: ' + error.message;
+    return;
+  }
+  $('pesan-produk').textContent = data.length === 0 ? 'Belum ada menu.' : '';
+
+  data.forEach((p) => {
+    const margin = p.harga_jual > 0 ? Math.round(((p.harga_jual - p.harga_modal) / p.harga_jual) * 100) : 0;
+    let status = '<span class="lencana hijau">Dijual</span>';
+    if (!p.aktif) status = '<span class="lencana abu-abu">Nonaktif</span>';
+    else if (p.stok <= 0) status = '<span class="lencana oranye">Stok habis</span>';
+    else if (p.stok <= 5) status = '<span class="lencana oranye">Stok menipis</span>';
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><b class="nama-menu"></b></td>
+      <td class="kategori-menu abu"></td>
+      <td class="angka-kanan">${rupiah(p.harga_jual)}</td>
+      <td class="angka-kanan abu">${rupiah(p.harga_modal)}</td>
+      <td class="angka-kanan">${margin}%</td>
+      <td class="angka-kanan"><b>${p.stok}</b></td>
+      <td>${status}</td>
+      <td><div class="aksi"><button class="ubah">Ubah</button><button class="stok-btn">Stok</button></div></td>`;
+    tr.querySelector('.nama-menu').textContent = p.nama;
+    tr.querySelector('.kategori-menu').textContent = p.kategori ? p.kategori.nama : '-';
+    tr.querySelector('.ubah').onclick = () => bukaJendelaProduk(p);
+    tr.querySelector('.stok-btn').onclick = () => bukaJendelaStok(p);
+    $('isi-tabel-produk').appendChild(tr);
+  });
+
+  tampilkanRiwayatStok();
+}
+
+async function tampilkanRiwayatStok() {
+  const nomor = antrean.produk;
+  const { data, error } = await db
+    .from('log_stok')
+    .select('id, created_at, perubahan, stok_setelah, alasan, transaksi_id, produk(nama), staf(nama)')
+    .order('id', { ascending: false })
+    .limit(10);
+
+  if (nomor !== antrean.produk) return;
+  const wadah = $('riwayat-stok');
+  wadah.innerHTML = '';
+  if (error) { wadah.textContent = 'Gagal memuat riwayat: ' + error.message; return; }
+  if (data.length === 0) { wadah.innerHTML = '<p class="kosong">Belum ada perubahan stok.</p>'; return; }
+
+  data.forEach((l) => {
+    const waktu = new Date(l.created_at).toLocaleString('id-ID', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+    const tanda = l.perubahan > 0 ? '+' + l.perubahan : String(l.perubahan);
+    const warna = l.perubahan > 0 ? '#15803D' : '#C2410C';
+    const nota = l.transaksi_id ? ` · Nota #${l.transaksi_id}` : '';
+
+    const baris = document.createElement('div');
+    baris.className = 'baris';
+    baris.innerHTML = `
+      <span><b style="color:${warna}">${tanda}</b> <b class="nama-menu"></b>
+        <span class="abu">· ${NAMA_ALASAN[l.alasan] || l.alasan}${nota}</span></span>
+      <span class="abu" style="text-align:right">sisa ${l.stok_setelah}<br><small class="oleh"></small></span>`;
+    baris.querySelector('.nama-menu').textContent = l.produk ? l.produk.nama : '-';
+    baris.querySelector('.oleh').textContent = `${waktu} · ${l.staf ? l.staf.nama : '-'}`;
+    wadah.appendChild(baris);
+  });
+}
+
+// ----- Jendela tambah / ubah menu -----
+function hitungMarginForm() {
+  const jual = Number($('p-jual').value || 0);
+  const modal = Number($('p-modal').value || 0);
+  if (!jual) { $('p-margin').textContent = '-'; return; }
+  const untung = jual - modal;
+  $('p-margin').textContent = `${rupiah(untung)} (${Math.round((untung / jual) * 100)}%)`;
+}
+$('p-jual').oninput = hitungMarginForm;
+$('p-modal').oninput = hitungMarginForm;
+
+function bukaJendelaProduk(p) {
+  produkDiubah = p || null;
+  $('judul-produk').textContent = p ? 'Ubah menu' : 'Menu baru';
+  $('sub-produk').textContent = p ? 'Perubahan harga tidak mengubah nota lama.' : 'Stok awal 0. Tambah stok setelah menu disimpan.';
+  $('p-nama').value = p ? p.nama : '';
+  $('p-kategori').value = p ? p.kategori_id : (daftarKategori[0] ? daftarKategori[0].id : '');
+  $('p-jual').value = p ? p.harga_jual : '';
+  $('p-modal').value = p ? p.harga_modal : '';
+  $('p-aktif').checked = p ? p.aktif : true;
+  hitungMarginForm();
+  tampilkanInfo($('info-produk'), '');
+  $('jendela-produk').classList.remove('tersembunyi');
+  $('p-nama').focus();
+}
+
+$('tombol-menu-baru').onclick = () => bukaJendelaProduk(null);
+$('batal-produk').onclick = () => $('jendela-produk').classList.add('tersembunyi');
+
+$('form-produk').onsubmit = async (e) => {
+  e.preventDefault();
+  const jual = Number($('p-jual').value);
+  const modal = Number($('p-modal').value);
+  if (modal > jual) {
+    tampilkanInfo($('info-produk'), 'Hati-hati: harga modal lebih besar dari harga jual (rugi). Ubah dulu angkanya.', 'gagal');
+    return;
+  }
+
+  $('simpan-produk').disabled = true;
+  const { error } = await db.rpc('simpan_produk', {
+    p_id: produkDiubah ? produkDiubah.id : null,
+    p_nama: $('p-nama').value,
+    p_kategori_id: Number($('p-kategori').value),
+    p_harga_jual: jual,
+    p_harga_modal: modal,
+    p_aktif: $('p-aktif').checked,
+  });
+  $('simpan-produk').disabled = false;
+
+  if (error) {
+    tampilkanInfo($('info-produk'), 'Gagal: ' + error.message, 'gagal');
+    return;
+  }
+  $('jendela-produk').classList.add('tersembunyi');
+  tampilkanProduk();
+};
+
+// ----- Jendela ubah stok -----
+function hitungStokBaru() {
+  const jumlah = Number($('s-jumlah').value || 0);
+  const alasan = $('s-alasan').value;
+  let perubahan = jumlah;
+  if (alasan === 'rusak') perubahan = -Math.abs(jumlah);
+  if (alasan === 'tambah_stok') perubahan = Math.abs(jumlah);
+  const hasil = produkStok.stok + perubahan;
+  $('s-hasil').textContent = jumlah ? (hasil < 0 ? 'Tidak boleh minus' : hasil) : produkStok.stok;
+  return perubahan;
+}
+
+function aturLabelStok() {
+  const alasan = $('s-alasan').value;
+  $('label-jumlah').textContent =
+    alasan === 'tambah_stok' ? 'Jumlah ditambah' :
+    alasan === 'rusak' ? 'Jumlah yang rusak / terbuang' :
+    'Selisih (contoh: 3 atau -2)';
+  hitungStokBaru();
+}
+
+function bukaJendelaStok(p) {
+  produkStok = p;
+  $('judul-stok').textContent = 'Ubah stok';
+  $('sub-stok').textContent = `${p.nama} · stok sekarang ${p.stok}`;
+  $('s-alasan').value = 'tambah_stok';
+  $('s-jumlah').value = '';
+  aturLabelStok();
+  tampilkanInfo($('info-stok'), '');
+  $('jendela-stok').classList.remove('tersembunyi');
+  $('s-jumlah').focus();
+}
+
+$('s-alasan').onchange = aturLabelStok;
+$('s-jumlah').oninput = hitungStokBaru;
+$('batal-stok').onclick = () => $('jendela-stok').classList.add('tersembunyi');
+
+$('form-stok').onsubmit = async (e) => {
+  e.preventDefault();
+  const perubahan = hitungStokBaru();
+  if (!perubahan) {
+    tampilkanInfo($('info-stok'), 'Isi jumlahnya dulu.', 'gagal');
+    return;
+  }
+
+  $('simpan-stok').disabled = true;
+  const { error } = await db.rpc('ubah_stok', {
+    p_produk_id: produkStok.id,
+    p_perubahan: perubahan,
+    p_alasan: $('s-alasan').value,
+  });
+  $('simpan-stok').disabled = false;
+
+  if (error) {
+    tampilkanInfo($('info-stok'), 'Gagal: ' + error.message, 'gagal');
+    return;
+  }
+  $('jendela-stok').classList.add('tersembunyi');
+  tampilkanProduk();
+};
+
+// ================= LAPORAN =================
+document.querySelectorAll('#pilih-periode button').forEach((b) => {
+  b.onclick = () => {
+    periodeLaporan = b.dataset.periode;
+    document.querySelectorAll('#pilih-periode button').forEach((x) => x.classList.toggle('aktif', x === b));
+    tampilkanLaporan();
+  };
+});
+
+function rentangTanggal(periode = periodeLaporan) {
+  const hariIni = new Date();
+  let dari = new Date(hariIni);
+  if (periode === '7hari') dari.setDate(hariIni.getDate() - 6);
+  if (periode === 'bulan') dari = new Date(hariIni.getFullYear(), hariIni.getMonth(), 1);
+  return { dari: tanggalLokal(dari), sampai: tanggalLokal(hariIni) };
+}
+
+async function tampilkanLaporan() {
+  const nomor = ++antrean.laporan;
+  const { dari, sampai } = rentangTanggal();
+  $('pesan-laporan').textContent = 'Menghitung laporan...';
+
+  const { data: l, error } = await db.rpc('laporan_penjualan', { p_dari: dari, p_sampai: sampai });
+  if (nomor !== antrean.laporan) return;
+  if (error) {
+    $('pesan-laporan').textContent = 'Gagal memuat laporan: ' + error.message;
+    return;
+  }
+  $('pesan-laporan').textContent = l.jumlah_transaksi === 0 ? 'Belum ada transaksi lunas di periode ini.' : '';
+
+  const margin = l.penjualan > 0 ? Math.round((l.laba_kotor / l.penjualan) * 100) : 0;
+  const rata = l.jumlah_transaksi > 0 ? Math.round(l.total_diterima / l.jumlah_transaksi) : 0;
+
+  $('l-laba').textContent = rupiah(l.laba_kotor);
+  $('l-margin').textContent = `Margin ${margin}% dari penjualan`;
+  $('l-penjualan').textContent = rupiah(l.penjualan);
+  $('l-transaksi').textContent = l.jumlah_transaksi;
+  $('l-rata').textContent = `Rata-rata ${rupiah(rata)} per nota`;
+
+  $('r-penjualan').textContent = rupiah(l.penjualan);
+  $('r-diskon').textContent = '−' + rupiah(l.diskon);
+  $('r-poin').textContent = '−' + rupiah(l.potongan_poin);
+  $('r-modal').textContent = '−' + rupiah(l.modal);
+  $('r-laba').textContent = rupiah(l.laba_kotor);
+  $('r-layanan').textContent = rupiah(l.biaya_layanan);
+  $('r-pajak').textContent = rupiah(l.pajak);
+  $('r-total').textContent = rupiah(l.total_diterima);
+
+  $('r-metode').innerHTML = l.per_metode.length ? '' : '<p class="kosong">Belum ada data.</p>';
+  l.per_metode.forEach((m) => {
+    const baris = document.createElement('div');
+    baris.className = 'baris';
+    baris.innerHTML = `<span><b>${NAMA_METODE[m.metode] || m.metode}</b> <span class="abu">· ${m.jumlah} nota</span></span><span>${rupiah(m.total)}</span>`;
+    $('r-metode').appendChild(baris);
+  });
+
+  $('r-menu').innerHTML = l.menu_terlaris.length ? '' : '<p class="kosong">Belum ada data.</p>';
+  l.menu_terlaris.forEach((m, i) => {
+    const baris = document.createElement('div');
+    baris.className = 'baris';
+    baris.innerHTML = `<span>${i + 1}. <b class="nama-menu"></b> <span class="abu">· ${m.qty} terjual</span></span><span>laba ${rupiah(m.laba)}</span>`;
+    baris.querySelector('.nama-menu').textContent = m.nama;
+    $('r-menu').appendChild(baris);
+  });
+
+  const peta = {};
+  l.per_jam.forEach((j) => { peta[j.jam] = Number(j.total); });
+  const tertinggi = Math.max(1, ...Object.values(peta));
+  $('r-jam').innerHTML = '';
+  for (let jam = 8; jam <= 22; jam++) {
+    const nilai = peta[jam] || 0;
+    const batang = document.createElement('div');
+    batang.className = 'batang';
+    batang.title = `${jam}.00 · ${rupiah(nilai)}`;
+    batang.innerHTML = `<div style="height:${(nilai / tertinggi) * 100}%; opacity:${nilai ? 1 : 0.2}"></div><span>${jam}</span>`;
+    $('r-jam').appendChild(batang);
+  }
+}
+
+// ================= STAF =================
+async function tampilkanStaf() {
+  const nomor = ++antrean.staf;
+  $('pesan-staf').textContent = 'Memuat staf...';
+  const { data, error } = await db.rpc('daftar_staf');
+  if (nomor !== antrean.staf) return;
+  if (error) { $('pesan-staf').textContent = 'Gagal memuat staf: ' + error.message; return; }
+  $('pesan-staf').textContent = '';
+  const isi = $('isi-tabel-staf');
+  isi.innerHTML = '';
+  data.forEach((s) => {
+    const tr = document.createElement('tr');
+    const diriSendiri = s.id === idPenggunaAktif;
+    tr.innerHTML = `
+      <td><b class="n"></b>${diriSendiri ? ' <span class="abu">(kamu)</span>' : ''}</td>
+      <td class="abu e"></td>
+      <td>${s.peran === 'owner' ? 'Owner' : 'Kasir'}</td>
+      <td><span class="lencana ${s.sedang_masuk ? 'hijau' : 'abu-abu'}">${s.sedang_masuk ? 'Sedang kerja' : 'Tidak di tempat'}</span></td>
+      <td><div class="aksi">${diriSendiri ? '' : '<button>Ubah</button>'}</div></td>`;
+    tr.querySelector('.n').textContent = s.nama;
+    tr.querySelector('.e').textContent = s.email;
+    const tombol = tr.querySelector('.aksi button');
+    if (tombol) tombol.onclick = () => bukaJendelaStaf(s);
+    isi.appendChild(tr);
+  });
+}
+
+function bukaJendelaStaf(s) {
+  $('judul-staf').textContent = s ? 'Ubah staf' : 'Tambah staf';
+  $('staf-email').value = s ? s.email : '';
+  $('staf-email').readOnly = !!s;
+  $('staf-nama').value = s ? s.nama : '';
+  $('staf-peran').value = s ? s.peran : 'kasir';
+  tampilkanInfo($('info-staf-jendela'), '');
+  $('jendela-staf').classList.remove('tersembunyi');
+}
+$('tombol-staf-baru').onclick = () => bukaJendelaStaf(null);
+$('batal-staf').onclick = () => $('jendela-staf').classList.add('tersembunyi');
+
+$('form-staf').onsubmit = async (e) => {
+  e.preventDefault();
+  $('simpan-staf').disabled = true;
+  tampilkanInfo($('info-staf-jendela'), 'Menyimpan...');
+  const { error } = await db.rpc('jadikan_staf', {
+    p_email: $('staf-email').value.trim(),
+    p_nama: $('staf-nama').value.trim(),
+    p_peran: $('staf-peran').value,
+  });
+  $('simpan-staf').disabled = false;
+  if (error) { tampilkanInfo($('info-staf-jendela'), error.message, 'gagal'); return; }
+  $('jendela-staf').classList.add('tersembunyi');
+  tampilkanStaf();
+};
+
+// ================= REKAP ABSENSI =================
+document.querySelectorAll('#pilih-periode-absen button').forEach((b) => {
+  b.onclick = () => {
+    periodeAbsen = b.dataset.periode;
+    document.querySelectorAll('#pilih-periode-absen button').forEach((x) => x.classList.toggle('aktif', x === b));
+    tampilkanAbsensi();
+  };
+});
+
+function lamaKerja(menit) {
+  if (menit === null || menit === undefined) return '<span class="lencana hijau">Masih kerja</span>';
+  const j = Math.floor(menit / 60), m = menit % 60;
+  return j ? `${j} jam ${m} menit` : `${m} menit`;
+}
+
+async function tampilkanAbsensi() {
+  const nomor = ++antrean.absensi;
+  const { dari, sampai } = rentangTanggal(periodeAbsen);
+  $('pesan-absensi').textContent = 'Memuat absensi...';
+  const { data, error } = await db.rpc('rekap_absensi', { p_dari: dari, p_sampai: sampai });
+  if (nomor !== antrean.absensi) return;
+  if (error) { $('pesan-absensi').textContent = 'Gagal memuat absensi: ' + error.message; return; }
+  $('pesan-absensi').textContent = data.length ? '' : 'Belum ada yang absen di periode ini.';
+  const isi = $('isi-tabel-absensi');
+  isi.innerHTML = '';
+  data.forEach((a) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${new Date(a.masuk_at).toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric', month: 'short' })}</td>
+      <td><b class="n"></b></td>
+      <td>${jam(a.masuk_at)}</td>
+      <td>${a.pulang_at ? jam(a.pulang_at) : '–'}</td>
+      <td class="angka-kanan">${lamaKerja(a.menit)}</td>`;
+    tr.querySelector('.n').textContent = a.nama;
+    isi.appendChild(tr);
+  });
+}
+
+// ================= PENGATURAN TOKO =================
+function isiFormPengaturan() {
+  $('atur-nama').value = atur.nama_toko;
+  $('atur-pajak').value = Number(atur.pajak_persen);
+  $('atur-layanan').value = Number(atur.layanan_persen);
+  $('atur-belanja-poin').value = atur.belanja_per_poin;
+  $('atur-nilai-poin').value = atur.rupiah_per_poin;
+  tampilkanInfo($('info-pengaturan'), '');
+  contohPengaturan();
+}
+
+function contohPengaturan() {
+  const dasar = 100000;
+  const layanan = Math.round(dasar * Number($('atur-layanan').value || 0) / 100);
+  const pajak = Math.round((dasar + layanan) * Number($('atur-pajak').value || 0) / 100);
+  const per = Number($('atur-belanja-poin').value || 0);
+  const poin = per > 0 ? Math.floor(dasar / per) : 0;
+  $('contoh-pengaturan').textContent =
+    `Contoh pesanan ${rupiah(dasar)}: biaya layanan ${rupiah(layanan)}, pajak ${rupiah(pajak)}, ` +
+    `total ${rupiah(dasar + layanan + pajak)}. Pelanggan dapat ${poin} poin (senilai ${rupiah(poin * Number($('atur-nilai-poin').value || 0))}).`;
+}
+['atur-pajak', 'atur-layanan', 'atur-belanja-poin', 'atur-nilai-poin'].forEach((id) => { $(id).oninput = contohPengaturan; });
+
+$('form-pengaturan').onsubmit = async (e) => {
+  e.preventDefault();
+  $('simpan-pengaturan').disabled = true;
+  tampilkanInfo($('info-pengaturan'), 'Menyimpan...');
+  const { error } = await db.rpc('simpan_pengaturan', {
+    p_nama_toko: $('atur-nama').value.trim(),
+    p_pajak_persen: Number($('atur-pajak').value),
+    p_layanan_persen: Number($('atur-layanan').value),
+    p_belanja_per_poin: Number($('atur-belanja-poin').value),
+    p_rupiah_per_poin: Number($('atur-nilai-poin').value),
+  });
+  $('simpan-pengaturan').disabled = false;
+  if (error) { tampilkanInfo($('info-pengaturan'), error.message, 'gagal'); return; }
+  await muatPengaturan();
+  tampilkanInfo($('info-pengaturan'), 'Pengaturan tersimpan 👍', 'sukses');
+};
