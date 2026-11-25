@@ -413,10 +413,20 @@
 
     $('tombol-keluar').onclick = () => db.auth.signOut();
 
+    // Siapa yang sedang login. Dipakai agar tampilan tidak di-reset
+    // setiap kali Supabase mengecek ulang login (misalnya saat pindah tab browser).
+    let idPenggunaAktif = null;
+
     db.auth.onAuthStateChange((event, session) => {
       setTimeout(() => {
-        if (session) bukaKasir(session.user);
-        else bukaLogin();
+        if (!session) {
+          idPenggunaAktif = null;
+          bukaLogin();
+          return;
+        }
+        if (session.user.id === idPenggunaAktif) return; // orangnya sama, biarkan tampilan apa adanya
+        idPenggunaAktif = session.user.id;
+        bukaKasir(session.user);
       }, 0);
     });
 
@@ -430,6 +440,7 @@
       const { data: staf } = await db.from('staf').select('nama, peran').eq('id', user.id).maybeSingle();
       if (!staf) {
         $('pesan-login').textContent = 'Akun ini belum terdaftar sebagai staf.';
+        idPenggunaAktif = null;
         await db.auth.signOut();
         return;
       }
