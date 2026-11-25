@@ -74,6 +74,7 @@ $('form-login').onsubmit = async (e) => {
 };
 
 $('tombol-keluar').onclick = () => db.auth.signOut();
+$('tombol-keluar-hp').onclick = () => { if (confirm('Keluar dari aplikasi?')) db.auth.signOut(); };
 
 // Siapa yang sedang login. Dipakai agar tampilan tidak di-reset
 // setiap kali Supabase mengecek ulang login (misalnya saat pindah tab browser).
@@ -108,7 +109,12 @@ async function bukaKasir(user) {
   }
   $('halaman-login').classList.add('tersembunyi');
   $('halaman-kasir').classList.remove('tersembunyi');
-  $('info-staf').textContent = `Masuk sebagai ${staf.nama} (${staf.peran})`;
+  const jam = Number(new Date().toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: 'Asia/Jakarta' }));
+  const waktu = jam < 11 ? 'pagi' : jam < 15 ? 'siang' : jam < 18 ? 'sore' : 'malam';
+  $('sapaan').innerHTML = `<span class="sapa-lebar">Selamat ${waktu}, </span><span class="sapa-hp">Halo, </span><span class="nama-sapa"></span>`;
+  $('sapaan').querySelector('.nama-sapa').textContent = staf.nama;
+  $('peran-staf').textContent = staf.peran === 'owner' ? 'Owner' : 'Kasir';
+  $('avatar').textContent = staf.nama.split(/\s+/).map((k) => k[0]).join('').slice(0, 2).toUpperCase();
   document.querySelectorAll('.khusus-owner').forEach((el) => el.classList.toggle('tersembunyi', staf.peran !== 'owner'));
   keranjang = {};
   await muatPengaturan();
@@ -129,7 +135,7 @@ async function cekAbsen() {
   sedangMasuk = !!data;
   $('tombol-absen').textContent = sedangMasuk ? 'Absen pulang' : 'Absen masuk';
   $('tombol-absen').classList.toggle('pulang', sedangMasuk);
-  $('status-absen').textContent = sedangMasuk ? `Sudah absen masuk pukul ${jam(data.masuk_at)}` : 'Belum absen masuk';
+  $('status-absen').textContent = sedangMasuk ? `Absen masuk ${jam(data.masuk_at)}` : 'Belum absen masuk';
 }
 
 $('tombol-absen').onclick = async () => {
@@ -145,6 +151,8 @@ $('tombol-absen').onclick = async () => {
 
 // ================= TAB =================
 function pindahTab(nama) {
+  $('keranjang').classList.remove('terbuka');
+  window.scrollTo(0, 0);
   ['pesan', 'openbill', 'produk', 'laporan', 'staf', 'pengaturan'].forEach((t) => {
     $('tab-' + t).classList.toggle('aktif', t === nama);
     $('tampilan-' + t).classList.toggle('tersembunyi', t !== nama);
@@ -190,13 +198,31 @@ document.querySelectorAll('#pilih-tipe button').forEach((tombol) => {
     tipePesanan = tombol.dataset.tipe;
     document.querySelectorAll('#pilih-tipe button').forEach((b) => b.classList.toggle('aktif', b === tombol));
     $('bagian-meja').classList.toggle('tersembunyi', tipePesanan !== 'makan_di_sini');
+    gambarKeranjang();
   };
 });
 
 // ================= MENU KASIR =================
+let dataMenu = [];          // [{ id, nama, produk: [...] }] dari database
+let kategoriAktif = 'semua';
+const WARNA_LATAR = { 'gambar/nasi.svg': '#FFF1E2', 'gambar/mie.svg': '#FFF6DB', 'gambar/minuman.svg': '#E6F4FF', 'gambar/makanan.svg': '#E8EEFD' };
+
+// Isi kotak gambar: foto asli (penuh) atau ilustrasi bawaan (di atas warna lembut)
+function isiFoto(wadah, foto, namaKategori) {
+  const src = gambarMenu(foto, namaKategori);
+  const img = document.createElement('img');
+  img.alt = '';
+  img.loading = 'lazy';
+  img.src = src;
+  if (!foto) img.className = 'ilustrasi';
+  wadah.style.background = foto ? '#F2F4FA' : (WARNA_LATAR[src] || '#E8EEFD');
+  wadah.innerHTML = '';
+  wadah.appendChild(img);
+}
+
 async function tampilkanMenu() {
   const nomor = ++antrean.menu;
-  $('pesan').textContent = 'Memuat menu...';
+  if (!dataMenu.length) $('pesan').textContent = 'Memuat menu...';
 
   const { data, error } = await db
     .from('kategori')
@@ -211,35 +237,10 @@ async function tampilkanMenu() {
     return;
   }
 
-  $('pesan').textContent = '';
-  $('daftar').innerHTML = '';
+  dataMenu = data.filter((k) => k.produk.length > 0);
   semuaProduk = {};
-  data.forEach((kat) => {
-    if (kat.produk.length === 0) return;
-    const judul = document.createElement('h2');
-    judul.textContent = kat.nama;
-    $('daftar').appendChild(judul);
-
-    const grid = document.createElement('div');
-    grid.className = 'grid';
-    kat.produk.forEach((p) => {
-      semuaProduk[p.id] = p;
-      const kartu = document.createElement('button');
-      kartu.className = 'kartu';
-      kartu.dataset.id = p.id;
-      kartu.disabled = p.stok <= 0;
-      kartu.innerHTML = `
-        <img class="foto-menu" loading="lazy" alt="">
-        <div class="nama"></div>
-        <div class="harga">${rupiah(p.harga_jual)}</div>
-        <div class="stok">${p.stok > 0 ? 'Stok: ' + p.stok : 'Stok habis'}</div>`;
-      kartu.querySelector('.nama').textContent = p.nama;
-      kartu.querySelector('.foto-menu').src = gambarMenu(p.foto, kat.nama);
-      kartu.onclick = () => tambah(p.id);
-      grid.appendChild(kartu);
-    });
-    $('daftar').appendChild(grid);
-  });
+  dataMenu.forEach((k) => k.produk.forEach((p) => { semuaProduk[p.id] = { ...p, kategori: k.nama }; }));
+  if (kategoriAktif !== 'semua' && !dataMenu.some((k) => k.id === kategoriAktif)) kategoriAktif = 'semua';
 
   // buang isi keranjang yang menunya sudah tidak tersedia
   Object.keys(keranjang).forEach((id) => {
@@ -247,19 +248,126 @@ async function tampilkanMenu() {
     else if (keranjang[id] > semuaProduk[id].stok) keranjang[id] = semuaProduk[id].stok;
     if (keranjang[id] <= 0) delete keranjang[id];
   });
+
+  gambarKategori();
+  gambarDaftarMenu();
   gambarKeranjang();
 }
 
+function gambarKategori() {
+  const wadah = $('filter-kategori');
+  wadah.innerHTML = '';
+  const total = Object.keys(semuaProduk).length;
+  const pilihan = [{ id: 'semua', nama: 'Semua', jumlah: total, contoh: null }]
+    .concat(dataMenu.map((k) => ({ id: k.id, nama: k.nama, jumlah: k.produk.length, contoh: k.nama })));
+
+  pilihan.forEach((k) => {
+    const chip = document.createElement('button');
+    chip.type = 'button';
+    chip.className = 'chip' + (k.id === kategoriAktif ? ' aktif' : '');
+    chip.innerHTML = `<span class="ikon-kat"><img alt=""></span><span class="teks-kat"><span class="n"></span><small>${k.jumlah} menu</small></span>`;
+    chip.querySelector('img').src = k.contoh ? gambarMenu(null, k.contoh) : 'gambar/makanan.svg';
+    chip.querySelector('.n').textContent = k.nama;
+    chip.onclick = () => { kategoriAktif = k.id; gambarKategori(); gambarDaftarMenu(); };
+    wadah.appendChild(chip);
+  });
+}
+
+function gambarDaftarMenu() {
+  const cari = $('cari-menu').value.trim().toLowerCase();
+  const daftar = $('daftar');
+  daftar.innerHTML = '';
+
+  let menu = [];
+  dataMenu.forEach((k) => {
+    if (kategoriAktif !== 'semua' && k.id !== kategoriAktif) return;
+    k.produk.forEach((p) => menu.push(semuaProduk[p.id]));
+  });
+  if (cari) menu = menu.filter((p) => p.nama.toLowerCase().includes(cari));
+
+  const namaKat = kategoriAktif === 'semua' ? 'Semua Menu' : (dataMenu.find((k) => k.id === kategoriAktif) || {}).nama;
+  $('judul-daftar').innerHTML = '';
+  $('judul-daftar').append(namaKat || 'Menu');
+  const jumlah = document.createElement('span');
+  jumlah.textContent = ` · ${menu.length} item`;
+  $('judul-daftar').appendChild(jumlah);
+
+  $('pesan').textContent = menu.length ? '' : (cari ? `Menu "${$('cari-menu').value.trim()}" tidak ditemukan.` : 'Belum ada menu yang dijual.');
+
+  menu.forEach((p) => {
+    const kartu = document.createElement('div');
+    kartu.className = 'kartu-menu';
+    kartu.dataset.id = p.id;
+    kartu.innerHTML = `
+      <div class="foto-wadah"></div>
+      <div class="info-menu"><span class="nama"></span></div>
+      <div class="baris-harga"><span class="harga">${rupiah(p.harga_jual)}</span><span class="stok-kecil"></span></div>
+      <span class="aksi-menu"></span>`;
+    isiFoto(kartu.querySelector('.foto-wadah'), p.foto, p.kategori);
+    kartu.querySelector('.nama').textContent = p.nama;
+
+    const stok = kartu.querySelector('.stok-kecil');
+    if (p.stok <= 0) {
+      kartu.classList.add('habis');
+      stok.textContent = 'Stok habis';
+      kartu.querySelector('.foto-wadah').insertAdjacentHTML('beforeend', '<span class="badge abu">Habis</span>');
+    } else {
+      stok.textContent = 'Sisa ' + p.stok;
+      if (p.stok <= 5) {
+        stok.classList.add('menipis');
+        kartu.querySelector('.foto-wadah').insertAdjacentHTML('beforeend', `<span class="badge merah">Sisa ${p.stok} porsi</span>`);
+      }
+    }
+    kartu.onclick = () => tambah(p.id);
+    daftar.appendChild(kartu);
+  });
+  aturTombolKartu();
+}
+
+// Tombol di kartu menu: "+" kalau belum dipesan, atau − jumlah + kalau sudah
+function aturTombolKartu() {
+  document.querySelectorAll('.kartu-menu').forEach((kartu) => {
+    const id = kartu.dataset.id;
+    const p = semuaProduk[id];
+    const qty = keranjang[id] || 0;
+    const aksi = kartu.querySelector('.aksi-menu');
+    kartu.classList.toggle('dipilih', qty > 0);
+    aksi.innerHTML = '';
+    if (qty > 0) {
+      aksi.innerHTML = `<span class="stepper"><button type="button" class="min">−</button><span>${qty}</span><button type="button" class="plus">+</button></span>`;
+      aksi.querySelector('.min').setAttribute('aria-label', 'Kurangi ' + p.nama);
+      aksi.querySelector('.plus').setAttribute('aria-label', 'Tambah ' + p.nama);
+      aksi.querySelector('.min').onclick = (e) => { e.stopPropagation(); kurang(id); };
+      aksi.querySelector('.plus').onclick = (e) => { e.stopPropagation(); tambah(id); };
+      aksi.querySelector('.plus').disabled = qty >= p.stok;
+    } else {
+      const tombol = document.createElement('button');
+      tombol.type = 'button';
+      tombol.className = 'tambah-bulat';
+      tombol.setAttribute('aria-label', 'Tambah ' + p.nama);
+      tombol.disabled = p.stok <= 0;
+      tombol.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.8" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>';
+      tombol.onclick = (e) => { e.stopPropagation(); tambah(id); };
+      aksi.appendChild(tombol);
+    }
+  });
+}
+
+$('cari-menu').oninput = gambarDaftarMenu;
+
 // ================= KERANJANG =================
 function tambah(id) {
+  const p = semuaProduk[id];
+  if (!p) return;
   const jumlah = keranjang[id] || 0;
-  if (jumlah >= semuaProduk[id].stok) return;
+  if (jumlah >= p.stok) return;
   keranjang[id] = jumlah + 1;
+  $('info').textContent = '';
   gambarKeranjang();
 }
 
 function kurang(id) {
-  keranjang[id] = keranjang[id] - 1;
+  keranjang[id] = (keranjang[id] || 0) - 1;
   if (keranjang[id] <= 0) delete keranjang[id];
   gambarKeranjang();
 }
@@ -284,19 +392,22 @@ function gambarKeranjang() {
     const baris = document.createElement('div');
     baris.className = 'item';
     baris.innerHTML = `
+      <div class="item-foto"></div>
       <div class="item-info">
-        <div class="item-nama"></div>
-        <div class="item-harga">${qty} × ${rupiah(p.harga_jual)}</div>
+        <span class="item-nama"></span>
+        <span class="item-harga">${rupiah(p.harga_jual)} / porsi</span>
+        <span class="item-total">${rupiah(p.harga_jual * qty)}</span>
       </div>
-      <div class="qty">
-        <button aria-label="Kurangi">−</button>
-        <span>${qty}</span>
-        <button aria-label="Tambah">+</button>
-      </div>`;
+      <span class="stepper abu">
+        <button type="button" class="min">−</button><span>${qty}</span><button type="button" class="plus">+</button>
+      </span>`;
+    isiFoto(baris.querySelector('.item-foto'), p.foto, p.kategori);
     baris.querySelector('.item-nama').textContent = p.nama;
-    const tombol = baris.querySelectorAll('.qty button');
-    tombol[0].onclick = () => kurang(id);
-    tombol[1].onclick = () => tambah(id);
+    baris.querySelector('.min').setAttribute('aria-label', 'Kurangi ' + p.nama);
+    baris.querySelector('.plus').setAttribute('aria-label', 'Tambah ' + p.nama);
+    baris.querySelector('.min').onclick = () => kurang(id);
+    baris.querySelector('.plus').onclick = () => tambah(id);
+    baris.querySelector('.plus').disabled = qty >= p.stok;
     isi.appendChild(baris);
   });
 
@@ -305,14 +416,24 @@ function gambarKeranjang() {
   $('layanan').textContent = rupiah(layanan);
   $('pajak').textContent = rupiah(pajak);
   $('total').textContent = rupiah(total);
-  $('bar-info').textContent = jumlahItem + ' item';
+  $('ringkas-item').textContent = `${jumlahItem} item · ${NAMA_TIPE[tipePesanan]}`;
+  $('bar-info').textContent = `${jumlahItem} item · ${NAMA_TIPE[tipePesanan]}`;
   $('bar-total').textContent = rupiah(total);
   $('tombol-simpan').disabled = daftarId.length === 0;
-
-  document.querySelectorAll('.kartu').forEach((k) => {
-    k.classList.toggle('dipilih', Boolean(keranjang[k.dataset.id]));
-  });
+  $('tombol-simpan').textContent = daftarId.length ? `Simpan pesanan · ${rupiah(total)}` : 'Simpan pesanan';
+  $('kosongkan').disabled = daftarId.length === 0;
+  aturTombolKartu();
 }
+
+$('kosongkan').onclick = () => {
+  if (!Object.keys(keranjang).length || !confirm('Kosongkan semua pesanan?')) return;
+  keranjang = {};
+  gambarKeranjang();
+};
+
+// Di HP, panel pesanan muncul sebagai lembar dari bawah
+$('bar-hp').onclick = () => $('keranjang').classList.add('terbuka');
+$('tutup-keranjang').onclick = () => $('keranjang').classList.remove('terbuka');
 
 // ================= SIMPAN PESANAN =================
 $('tombol-simpan').onclick = async () => {
@@ -352,9 +473,19 @@ $('tombol-simpan').onclick = async () => {
 };
 
 // ================= OPEN BILL =================
+function aturJumlahOpenBill(n) {
+  $('jumlah-openbill').textContent = n;
+  $('jumlah-openbill').classList.toggle('tersembunyi', n === 0);
+  $('banner-judul').textContent = n ? `${n} nota belum dibayar` : 'Semua nota sudah lunas';
+  $('banner-sub').textContent = n
+    ? 'Ketuk di sini untuk lihat open bill dan terima pembayaran.'
+    : 'Pesanan makan di sini masuk ke open bill dan dibayar setelah selesai makan.';
+}
+$('banner').onclick = () => pindahTab('openbill');
+
 async function hitungOpenBill() {
   const { count } = await db.from('transaksi').select('id', { count: 'exact', head: true }).eq('status', 'open');
-  $('tab-openbill').textContent = `Open bill (${count || 0})`;
+  aturJumlahOpenBill(count || 0);
 }
 
 async function tampilkanOpenBill() {
@@ -374,7 +505,7 @@ async function tampilkanOpenBill() {
     return;
   }
 
-  $('tab-openbill').textContent = `Open bill (${data.length})`;
+  aturJumlahOpenBill(data.length);
   $('pesan-openbill').textContent = data.length === 0 ? 'Semua nota sudah dibayar 🎉' : '';
 
   data.forEach((n) => {

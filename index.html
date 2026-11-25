@@ -4,6 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Kasir Resto</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#4672EC">
@@ -30,36 +33,69 @@
 
   <!-- ================= APLIKASI ================= -->
   <section id="halaman-kasir" class="tersembunyi">
-    <header>
-      <div>
-        <h1 id="nama-toko">Kasir Resto</h1>
-        <p id="info-staf"></p>
-        <p class="status-absen" id="status-absen"></p>
-      </div>
-      <div class="kanan-header">
-        <button class="tombol-absen" id="tombol-absen">Absen masuk</button>
-        <button class="tombol-keluar" id="tombol-keluar">Keluar</button>
-      </div>
-    </header>
-
-    <nav class="tab">
-      <button id="tab-pesan" class="aktif">Pesanan baru</button>
-      <button id="tab-openbill">Open bill</button>
-      <button id="tab-produk" class="tersembunyi khusus-owner">Produk &amp; stok</button>
-      <button id="tab-laporan" class="tersembunyi khusus-owner">Laporan</button>
-      <button id="tab-staf" class="tersembunyi khusus-owner">Staf</button>
-      <button id="tab-pengaturan" class="tersembunyi khusus-owner">Pengaturan</button>
+    <nav class="navigasi" aria-label="Menu utama">
+      <div class="logo-nav" aria-hidden="true"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16l-1.5 11a2 2 0 0 1-2 1.7H7.5a2 2 0 0 1-2-1.7z"/><path d="M9 7V5a3 3 0 0 1 6 0v2"/></svg></div>
+      <button id="tab-pesan" class="aktif"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg><span>Kasir</span></button>
+      <button id="tab-openbill"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M9 5h11M9 12h11M9 19h11"/><circle cx="4.5" cy="5" r="1.5"/><circle cx="4.5" cy="12" r="1.5"/><circle cx="4.5" cy="19" r="1.5"/></svg><span>Open bill</span><b class="lencana-nav tersembunyi" id="jumlah-openbill">0</b></button>
+      <button id="tab-produk" class="tersembunyi khusus-owner"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/></svg><span>Stok</span></button>
+      <button id="tab-laporan" class="tersembunyi khusus-owner"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 20V11M10 20V5M16 20v-6M22 20H2"/></svg><span>Laporan</span></button>
+      <button id="tab-staf" class="tersembunyi khusus-owner"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3 20c.8-3 3-5 6-5s5.2 2 6 5"/><path d="M16 4.5a3 3 0 0 1 0 6M18 15c2 .7 3 2.5 3.5 5"/></svg><span>Staf</span></button>
+      <button id="tab-pengaturan" class="tersembunyi khusus-owner"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M2 12h3M19 12h3M4.9 19.1L7 17M17 7l2.1-2.1"/></svg><span>Atur</span></button>
+      <div class="pengisi"></div>
+      <button id="tombol-keluar" class="hanya-lebar"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="M10 17l-5-5 5-5M5 12h11"/></svg><span>Keluar</span></button>
     </nav>
 
-    <!-- Pesanan baru -->
+    <div class="isi-aplikasi">
+      <header class="atas">
+        <div class="avatar" id="avatar" aria-hidden="true">?</div>
+        <div class="sapaan">
+          <span class="kecil-abu"><span id="peran-staf">Kasir</span> · <span id="nama-toko">Kasir Resto</span></span>
+          <h1 id="sapaan">Halo</h1>
+          <span class="kecil-abu" id="status-absen"></span>
+        </div>
+        <button class="tombol-absen" id="tombol-absen">Absen masuk</button>
+        <button class="ikon-bulat hanya-hp" id="tombol-keluar-hp" aria-label="Keluar"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="M10 17l-5-5 5-5M5 12h11"/></svg></button>
+      </header>
+
+    <!-- Pesanan baru (kasir) -->
     <div id="tampilan-pesan">
-      <div class="wadah">
-        <main>
-          <p id="pesan">Memuat menu...</p>
-          <div id="daftar"></div>
+      <div class="wadah-kasir">
+        <main class="area-menu">
+          <h2 class="judul-besar hanya-hp">Pesanan baru,<br>mau catat apa?</h2>
+
+          <button class="banner" id="banner" type="button">
+            <span class="banner-teks">
+              <span class="pil">Open bill</span>
+              <b id="banner-judul">Memuat...</b>
+              <span id="banner-sub">Pesanan makan di sini masuk ke open bill dan dibayar setelah selesai makan.</span>
+            </span>
+            <img src="gambar/nasi.svg" alt="">
+          </button>
+
+          <label class="cari">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6B7591" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+            <span class="sr">Cari menu</span>
+            <input id="cari-menu" type="search" placeholder="Cari menu…" autocomplete="off">
+          </label>
+
+          <div class="chip-kategori" id="filter-kategori"></div>
+
+          <div class="judul-baris">
+            <h2 id="judul-daftar">Semua Menu</h2>
+          </div>
+          <p id="pesan" class="kosong">Memuat menu...</p>
+          <div class="grid-menu" id="daftar"></div>
         </main>
-        <aside id="keranjang">
-          <h2>Pesanan</h2>
+
+        <aside id="keranjang" class="panel-pesanan" aria-label="Pesanan">
+          <div class="kepala-pesanan">
+            <div>
+              <h2>Pesanan baru</h2>
+              <span class="kecil-abu" id="ringkas-item">0 item</span>
+            </div>
+            <button class="ikon-kotak" id="kosongkan" aria-label="Kosongkan pesanan"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6B7591" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg></button>
+            <button class="ikon-kotak hanya-hp" id="tutup-keranjang" aria-label="Tutup pesanan"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3A4560" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+          </div>
           <div class="tipe" id="pilih-tipe">
             <button data-tipe="makan_di_sini" class="aktif">Makan di sini</button>
             <button data-tipe="bawa_pulang">Bawa pulang</button>
@@ -76,14 +112,14 @@
             <div><span id="label-pajak">Pajak</span><span id="pajak">Rp0</span></div>
             <div class="total"><span>Total</span><span id="total">Rp0</span></div>
           </div>
-          <button class="tombol" id="tombol-simpan" disabled>Simpan pesanan</button>
+          <button class="tombol besar" id="tombol-simpan" disabled>Simpan pesanan</button>
           <p id="info"></p>
         </aside>
       </div>
-      <a class="bar-hp" href="#keranjang">
-        <span id="bar-info">0 item</span>
-        <span id="bar-total">Rp0</span>
-      </a>
+      <button class="bar-hp" id="bar-hp" type="button">
+        <span class="bar-teks"><small id="bar-info">0 item · Makan di sini</small><b id="bar-total">Rp0</b></span>
+        <span class="bar-aksi">Lihat pesanan <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span>
+      </button>
     </div>
 
     <!-- Open bill -->
@@ -259,6 +295,7 @@
         </form>
       </div>
     </div>
+    </div><!-- /isi-aplikasi -->
   </section>
 
   <!-- ================= JENDELA STAF ================= -->
