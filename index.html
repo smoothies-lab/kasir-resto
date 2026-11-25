@@ -179,7 +179,7 @@
   <section id="halaman-kasir" class="tersembunyi">
     <header>
       <div>
-        <h1>Kasir Resto</h1>
+        <h1 id="nama-toko">Kasir Resto</h1>
         <p id="info-staf"></p>
         <p class="status-absen" id="status-absen"></p>
       </div>
@@ -195,6 +195,7 @@
       <button id="tab-produk" class="tersembunyi khusus-owner">Produk &amp; stok</button>
       <button id="tab-laporan" class="tersembunyi khusus-owner">Laporan</button>
       <button id="tab-staf" class="tersembunyi khusus-owner">Staf</button>
+      <button id="tab-pengaturan" class="tersembunyi khusus-owner">Pengaturan</button>
     </nav>
 
     <!-- Pesanan baru -->
@@ -218,7 +219,8 @@
           <div id="isi-keranjang"></div>
           <div class="ringkas">
             <div><span>Subtotal</span><span id="subtotal">Rp0</span></div>
-            <div><span>Pajak (10%)</span><span id="pajak">Rp0</span></div>
+            <div id="baris-layanan"><span id="label-layanan">Biaya layanan</span><span id="layanan">Rp0</span></div>
+            <div><span id="label-pajak">Pajak</span><span id="pajak">Rp0</span></div>
             <div class="total"><span>Total</span><span id="total">Rp0</span></div>
           </div>
           <button class="tombol" id="tombol-simpan" disabled>Simpan pesanan</button>
@@ -307,6 +309,7 @@
             <div class="baris"><span class="abu">Potongan poin</span><span id="r-poin">Rp0</span></div>
             <div class="baris"><span class="abu">Modal barang terjual</span><span id="r-modal">Rp0</span></div>
             <div class="baris tebal"><span>Laba kotor</span><span id="r-laba">Rp0</span></div>
+            <div class="baris"><span class="abu">Biaya layanan</span><span id="r-layanan">Rp0</span></div>
             <div class="baris"><span class="abu">Pajak dipungut (disetor)</span><span id="r-pajak">Rp0</span></div>
             <div class="baris tebal"><span>Total uang diterima</span><span id="r-total">Rp0</span></div>
           </div>
@@ -367,6 +370,41 @@
         </div>
       </div>
     </div>
+
+    <!-- Pengaturan toko -->
+    <div id="tampilan-pengaturan" class="tersembunyi">
+      <div class="laporan">
+        <form class="panel jendela" id="form-pengaturan" style="max-width: 520px; max-height: none;">
+          <h3>Pengaturan toko</h3>
+          <p class="sub">Perubahan berlaku untuk pesanan dan pembayaran berikutnya.</p>
+          <label for="atur-nama">Nama toko</label>
+          <input id="atur-nama" type="text" required>
+          <div class="dua-tombol">
+            <div>
+              <label for="atur-pajak">Pajak (%)</label>
+              <input id="atur-pajak" type="number" min="0" max="100" step="0.01" required>
+            </div>
+            <div>
+              <label for="atur-layanan">Biaya layanan (%)</label>
+              <input id="atur-layanan" type="number" min="0" max="100" step="0.01" required>
+            </div>
+          </div>
+          <div class="dua-tombol">
+            <div>
+              <label for="atur-belanja-poin">Belanja per 1 poin (Rp)</label>
+              <input id="atur-belanja-poin" type="number" min="1" required>
+            </div>
+            <div>
+              <label for="atur-nilai-poin">Nilai 1 poin (Rp)</label>
+              <input id="atur-nilai-poin" type="number" min="0" required>
+            </div>
+          </div>
+          <p class="sub" id="contoh-pengaturan" style="margin-top: 12px;"></p>
+          <div class="info-jendela" id="info-pengaturan"></div>
+          <button type="submit" class="tombol" id="simpan-pengaturan">Simpan pengaturan</button>
+        </form>
+      </div>
+    </div>
   </section>
 
   <!-- ================= JENDELA STAF ================= -->
@@ -417,7 +455,7 @@
             <span><b id="nama-terpilih"></b> · <span id="poin-terpilih"></span></span>
             <button id="tombol-lepas-pelanggan">Ganti</button>
           </div>
-          <label for="poin-dipakai">Pakai poin (1 poin = Rp100)</label>
+          <label for="poin-dipakai" id="label-poin-dipakai">Pakai poin</label>
           <input id="poin-dipakai" type="number" inputmode="numeric" min="0" value="0">
         </div>
       </div>
@@ -438,7 +476,8 @@
         <div><span>Subtotal</span><span id="b-subtotal">Rp0</span></div>
         <div class="potong" id="baris-b-diskon"><span>Diskon</span><span id="b-diskon">−Rp0</span></div>
         <div class="potong" id="baris-b-poin"><span>Potongan poin</span><span id="b-poin">−Rp0</span></div>
-        <div><span>Pajak 10%</span><span id="b-pajak">Rp0</span></div>
+        <div id="baris-b-layanan"><span id="b-label-layanan">Biaya layanan</span><span id="b-layanan">Rp0</span></div>
+        <div><span id="b-label-pajak">Pajak</span><span id="b-pajak">Rp0</span></div>
         <div class="total"><span>Total</span><span id="b-total">Rp0</span></div>
         <div class="catatan-poin" id="b-poin-didapat"></div>
       </div>
@@ -512,7 +551,30 @@
     const SUPABASE_KEY = 'sb_publishable_qScsmwn8pYRm4BJBWQmgsg_1awJYDbi';
     const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    const PAJAK = 0.10;
+    // Pengaturan toko (diisi dari database saat login)
+    let atur = { nama_toko: 'Kasir Resto', pajak_persen: 10, layanan_persen: 0, belanja_per_poin: 10000, rupiah_per_poin: 100 };
+
+    // Rumus sama dengan di database: layanan dari dasar, pajak dari (dasar + layanan)
+    function hitungPajakLayanan(dasar) {
+      const layanan = Math.round(dasar * Number(atur.layanan_persen) / 100);
+      const pajak = Math.round((dasar + layanan) * Number(atur.pajak_persen) / 100);
+      return { layanan, pajak, total: dasar + layanan + pajak };
+    }
+
+    async function muatPengaturan() {
+      const { data } = await db.from('pengaturan_toko').select('*').eq('id', 1).maybeSingle();
+      if (data) atur = data;
+      $('nama-toko').textContent = atur.nama_toko;
+      document.title = atur.nama_toko;
+      const persen = (n) => Number(n).toLocaleString('id-ID') + '%';
+      $('label-pajak').textContent = `Pajak (${persen(atur.pajak_persen)})`;
+      $('label-layanan').textContent = `Biaya layanan (${persen(atur.layanan_persen)})`;
+      $('baris-layanan').classList.toggle('tersembunyi', Number(atur.layanan_persen) === 0);
+      $('b-label-pajak').textContent = `Pajak ${persen(atur.pajak_persen)}`;
+      $('b-label-layanan').textContent = `Biaya layanan ${persen(atur.layanan_persen)}`;
+      $('label-poin-dipakai').textContent = `Pakai poin (1 poin = ${rupiah(atur.rupiah_per_poin)})`;
+      gambarKeranjang();
+    }
     let semuaProduk = {};
     let keranjang = {};
     let tipePesanan = 'makan_di_sini';
@@ -588,6 +650,7 @@
       $('info-staf').textContent = `Masuk sebagai ${staf.nama} (${staf.peran})`;
       document.querySelectorAll('.khusus-owner').forEach((el) => el.classList.toggle('tersembunyi', staf.peran !== 'owner'));
       keranjang = {};
+      await muatPengaturan();
       muatMeja();
       muatKategori();
       pindahTab('pesan'); // sudah memuat menu
@@ -621,7 +684,7 @@
 
     // ================= TAB =================
     function pindahTab(nama) {
-      ['pesan', 'openbill', 'produk', 'laporan', 'staf'].forEach((t) => {
+      ['pesan', 'openbill', 'produk', 'laporan', 'staf', 'pengaturan'].forEach((t) => {
         $('tab-' + t).classList.toggle('aktif', t === nama);
         $('tampilan-' + t).classList.toggle('tersembunyi', t !== nama);
       });
@@ -630,8 +693,9 @@
       if (nama === 'produk') tampilkanProduk();
       if (nama === 'laporan') tampilkanLaporan();
       if (nama === 'staf') { tampilkanStaf(); tampilkanAbsensi(); }
+      if (nama === 'pengaturan') isiFormPengaturan();
     }
-    ['pesan', 'openbill', 'produk', 'laporan', 'staf'].forEach((t) => {
+    ['pesan', 'openbill', 'produk', 'laporan', 'staf', 'pengaturan'].forEach((t) => {
       $('tab-' + t).onclick = () => pindahTab(t);
     });
 
@@ -773,9 +837,9 @@
         isi.appendChild(baris);
       });
 
-      const pajak = Math.round(subtotal * PAJAK);
-      const total = subtotal + pajak;
+      const { layanan, pajak, total } = hitungPajakLayanan(subtotal);
       $('subtotal').textContent = rupiah(subtotal);
+      $('layanan').textContent = rupiah(layanan);
       $('pajak').textContent = rupiah(pajak);
       $('total').textContent = rupiah(total);
       $('bar-info').textContent = jumlahItem + ' item';
@@ -881,8 +945,6 @@
     }
 
     // ================= BAYAR =================
-    const RUPIAH_PER_POIN = 100;      // harus sama dengan di database
-    const BELANJA_PER_POIN = 10000;
     let pelangganDipilih = null;      // { id, nama, no_hp, poin }
     let tagihan = { total: 0 };
 
@@ -917,14 +979,13 @@
 
       let poin = 0;
       if (pelangganDipilih) {
-        const maksPoin = Math.min(pelangganDipilih.poin, Math.floor((subtotal - diskon) / RUPIAH_PER_POIN));
+        const maksPoin = Math.min(pelangganDipilih.poin, Math.floor((subtotal - diskon) / atur.rupiah_per_poin));
         $('poin-dipakai').max = maksPoin;
         poin = Math.min(Math.max(Math.floor(Number($('poin-dipakai').value || 0)), 0), maksPoin);
       }
-      const potongan = poin * RUPIAH_PER_POIN;
+      const potongan = poin * atur.rupiah_per_poin;
       const dasar = subtotal - diskon - potongan;
-      const pajak = Math.round(dasar / 10);
-      const total = dasar + pajak;
+      const { layanan, pajak, total } = hitungPajakLayanan(dasar);
       tagihan = { jenis, nilai, poin, total };
 
       $('b-subtotal').textContent = rupiah(subtotal);
@@ -932,11 +993,13 @@
       $('baris-b-diskon').classList.toggle('tersembunyi', diskon === 0);
       $('b-poin').textContent = '−' + rupiah(potongan) + ` (${poin} poin)`;
       $('baris-b-poin').classList.toggle('tersembunyi', potongan === 0);
+      $('b-layanan').textContent = rupiah(layanan);
+      $('baris-b-layanan').classList.toggle('tersembunyi', layanan === 0);
       $('b-pajak').textContent = rupiah(pajak);
       $('b-total').textContent = rupiah(total);
       $('total-bayar').textContent = rupiah(total);
       $('b-poin-didapat').textContent = pelangganDipilih
-        ? `${pelangganDipilih.nama} akan dapat +${Math.floor(dasar / BELANJA_PER_POIN)} poin` : '';
+        ? `${pelangganDipilih.nama} akan dapat +${Math.floor(dasar / atur.belanja_per_poin)} poin` : '';
       hitungKembalian();
     }
 
@@ -1287,6 +1350,7 @@
       $('r-poin').textContent = '−' + rupiah(l.potongan_poin);
       $('r-modal').textContent = '−' + rupiah(l.modal);
       $('r-laba').textContent = rupiah(l.laba_kotor);
+      $('r-layanan').textContent = rupiah(l.biaya_layanan);
       $('r-pajak').textContent = rupiah(l.pajak);
       $('r-total').textContent = rupiah(l.total_diterima);
 
@@ -1412,6 +1476,46 @@
         isi.appendChild(tr);
       });
     }
+
+    // ================= PENGATURAN TOKO =================
+    function isiFormPengaturan() {
+      $('atur-nama').value = atur.nama_toko;
+      $('atur-pajak').value = Number(atur.pajak_persen);
+      $('atur-layanan').value = Number(atur.layanan_persen);
+      $('atur-belanja-poin').value = atur.belanja_per_poin;
+      $('atur-nilai-poin').value = atur.rupiah_per_poin;
+      tampilkanInfo($('info-pengaturan'), '');
+      contohPengaturan();
+    }
+
+    function contohPengaturan() {
+      const dasar = 100000;
+      const layanan = Math.round(dasar * Number($('atur-layanan').value || 0) / 100);
+      const pajak = Math.round((dasar + layanan) * Number($('atur-pajak').value || 0) / 100);
+      const per = Number($('atur-belanja-poin').value || 0);
+      const poin = per > 0 ? Math.floor(dasar / per) : 0;
+      $('contoh-pengaturan').textContent =
+        `Contoh pesanan ${rupiah(dasar)}: biaya layanan ${rupiah(layanan)}, pajak ${rupiah(pajak)}, ` +
+        `total ${rupiah(dasar + layanan + pajak)}. Pelanggan dapat ${poin} poin (senilai ${rupiah(poin * Number($('atur-nilai-poin').value || 0))}).`;
+    }
+    ['atur-pajak', 'atur-layanan', 'atur-belanja-poin', 'atur-nilai-poin'].forEach((id) => { $(id).oninput = contohPengaturan; });
+
+    $('form-pengaturan').onsubmit = async (e) => {
+      e.preventDefault();
+      $('simpan-pengaturan').disabled = true;
+      tampilkanInfo($('info-pengaturan'), 'Menyimpan...');
+      const { error } = await db.rpc('simpan_pengaturan', {
+        p_nama_toko: $('atur-nama').value.trim(),
+        p_pajak_persen: Number($('atur-pajak').value),
+        p_layanan_persen: Number($('atur-layanan').value),
+        p_belanja_per_poin: Number($('atur-belanja-poin').value),
+        p_rupiah_per_poin: Number($('atur-nilai-poin').value),
+      });
+      $('simpan-pengaturan').disabled = false;
+      if (error) { tampilkanInfo($('info-pengaturan'), error.message, 'gagal'); return; }
+      await muatPengaturan();
+      tampilkanInfo($('info-pengaturan'), 'Pengaturan tersimpan 👍', 'sukses');
+    };
   </script>
 </body>
 </html>
