@@ -37,6 +37,17 @@ let produkStok = null;     // menu yang sedang diubah stoknya
 const antrean = { menu: 0, openbill: 0, produk: 0, laporan: 0, staf: 0, absensi: 0 }; // cegah tampilan dobel
 let periodeAbsen = 'hari';
 
+// Foto menu: dari Supabase Storage, atau gambar bawaan sesuai kategori
+const FOTO_URL = SUPABASE_URL + '/storage/v1/object/public/foto-menu/';
+function gambarMenu(foto, namaKategori) {
+  if (foto) return FOTO_URL + encodeURIComponent(foto);
+  const k = (namaKategori || '').toLowerCase();
+  if (/minum|jus|kopi|teh|es /.test(k)) return 'gambar/minuman.svg';
+  if (/mie|mi |bakmi|soto|bakso/.test(k)) return 'gambar/mie.svg';
+  if (/nasi/.test(k)) return 'gambar/nasi.svg';
+  return 'gambar/makanan.svg';
+}
+
 const rupiah = (n) => 'Rp' + Number(n || 0).toLocaleString('id-ID');
 const $ = (id) => document.getElementById(id);
 const NAMA_TIPE = { makan_di_sini: 'Makan di sini', bawa_pulang: 'Bawa pulang', pesan_antar: 'Pesan antar' };
@@ -189,7 +200,7 @@ async function tampilkanMenu() {
 
   const { data, error } = await db
     .from('kategori')
-    .select('id, nama, produk(id, nama, harga_jual, stok, aktif)')
+    .select('id, nama, produk(id, nama, harga_jual, stok, aktif, foto)')
     .eq('produk.aktif', true)
     .order('id')
     .order('id', { referencedTable: 'produk' });
@@ -218,10 +229,12 @@ async function tampilkanMenu() {
       kartu.dataset.id = p.id;
       kartu.disabled = p.stok <= 0;
       kartu.innerHTML = `
+        <img class="foto-menu" loading="lazy" alt="">
         <div class="nama"></div>
         <div class="harga">${rupiah(p.harga_jual)}</div>
         <div class="stok">${p.stok > 0 ? 'Stok: ' + p.stok : 'Stok habis'}</div>`;
       kartu.querySelector('.nama').textContent = p.nama;
+      kartu.querySelector('.foto-menu').src = gambarMenu(p.foto, kat.nama);
       kartu.onclick = () => tambah(p.id);
       grid.appendChild(kartu);
     });
@@ -566,7 +579,7 @@ async function tampilkanProduk() {
 
   const { data, error } = await db
     .from('produk')
-    .select('id, nama, kategori_id, harga_jual, harga_modal, stok, aktif, kategori(nama)')
+    .select('id, nama, kategori_id, harga_jual, harga_modal, stok, aktif, foto, kategori(nama)')
     .order('aktif', { ascending: false })
     .order('kategori_id')
     .order('id');
@@ -588,6 +601,7 @@ async function tampilkanProduk() {
 
     const tr = document.createElement('tr');
     tr.innerHTML = `
+      <td><img class="thumb" alt="" loading="lazy"></td>
       <td><b class="nama-menu"></b></td>
       <td class="kategori-menu abu"></td>
       <td class="angka-kanan">${rupiah(p.harga_jual)}</td>
@@ -595,11 +609,13 @@ async function tampilkanProduk() {
       <td class="angka-kanan">${margin}%</td>
       <td class="angka-kanan"><b>${p.stok}</b></td>
       <td>${status}</td>
-      <td><div class="aksi"><button class="ubah">Ubah</button><button class="stok-btn">Stok</button></div></td>`;
+      <td><div class="aksi"><button class="ubah">Ubah</button><button class="stok-btn">Stok</button><button class="foto-btn">Foto</button></div></td>`;
     tr.querySelector('.nama-menu').textContent = p.nama;
     tr.querySelector('.kategori-menu').textContent = p.kategori ? p.kategori.nama : '-';
     tr.querySelector('.ubah').onclick = () => bukaJendelaProduk(p);
     tr.querySelector('.stok-btn').onclick = () => bukaJendelaStok(p);
+    tr.querySelector('.foto-btn').onclick = () => bukaJendelaFoto(p);
+    tr.querySelector('.thumb').src = gambarMenu(p.foto, p.kategori ? p.kategori.nama : '');
     $('isi-tabel-produk').appendChild(tr);
   });
 
@@ -973,3 +989,92 @@ if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js').catch((err) => console.warn('Service worker gagal:', err));
   });
 }
+
+// ================= FOTO MENU =================
+let produkFoto = null; // menu yang sedang diubah fotonya
+
+function bukaJendelaFoto(p) {
+  produkFoto = p;
+  $('sub-foto').textContent = p.nama;
+  $('pratinjau-foto').src = gambarMenu(p.foto, p.kategori ? p.kategori.nama : '');
+  $('tombol-hapus-foto').disabled = !p.foto;
+  $('input-foto').value = '';
+  tampilkanInfo($('info-foto'), '');
+  $('jendela-foto').classList.remove('tersembunyi');
+}
+
+function tutupJendelaFoto() {
+  $('jendela-foto').classList.add('tersembunyi');
+  produkFoto = null;
+}
+$('tutup-foto').onclick = tutupJendelaFoto;
+
+// Kecilkan foto (maks 800px) supaya upload cepat & hemat kuota Supabase
+async function kecilkanFoto(file) {
+  const gambar = await new Promise((ok, gagal) => {
+    const img = new Image();
+    img.onload = () => ok(img);
+    img.onerror = () => gagal(new Error('File ini bukan gambar yang bisa dibaca'));
+    img.src = URL.createObjectURL(file);
+  });
+  const skala = Math.min(1, 800 / Math.max(gambar.width, gambar.height));
+  const kanvas = document.createElement('canvas');
+  kanvas.width = Math.round(gambar.width * skala);
+  kanvas.height = Math.round(gambar.height * skala);
+  kanvas.getContext('2d').drawImage(gambar, 0, 0, kanvas.width, kanvas.height);
+  URL.revokeObjectURL(gambar.src);
+  const jadiBlob = (tipe) => new Promise((ok) => kanvas.toBlob(ok, tipe, 0.82));
+  let blob = await jadiBlob('image/webp');
+  if (!blob || blob.type !== 'image/webp') blob = await jadiBlob('image/jpeg'); // iPhone lama belum bisa webp
+  return blob;
+}
+
+$('input-foto').onchange = async () => {
+  const file = $('input-foto').files[0];
+  if (!file || !produkFoto) return;
+  const p = produkFoto;
+  $('tombol-pilih-foto').classList.add('tersembunyi');
+  tampilkanInfo($('info-foto'), 'Mengecilkan foto...');
+  try {
+    const blob = await kecilkanFoto(file);
+    tampilkanInfo($('info-foto'), `Meng-upload (${Math.round(blob.size / 1024)} KB)...`);
+    const ext = blob.type === 'image/webp' ? 'webp' : 'jpg';
+    const namaFile = `produk-${p.id}-${Date.now()}.${ext}`;
+
+    const { error: errUpload } = await db.storage.from('foto-menu')
+      .upload(namaFile, blob, { contentType: blob.type, cacheControl: '31536000' });
+    if (errUpload) throw errUpload;
+
+    const { error: errSimpan } = await db.rpc('atur_foto_produk', { p_produk_id: p.id, p_foto: namaFile });
+    if (errSimpan) {
+      await db.storage.from('foto-menu').remove([namaFile]);
+      throw errSimpan;
+    }
+    if (p.foto) await db.storage.from('foto-menu').remove([p.foto]); // buang foto lama
+
+    p.foto = namaFile;
+    $('pratinjau-foto').src = gambarMenu(p.foto);
+    $('tombol-hapus-foto').disabled = false;
+    tampilkanInfo($('info-foto'), 'Foto tersimpan 👍', 'sukses');
+    tampilkanProduk();
+  } catch (err) {
+    tampilkanInfo($('info-foto'), 'Gagal: ' + err.message, 'gagal');
+  } finally {
+    $('tombol-pilih-foto').classList.remove('tersembunyi');
+    $('input-foto').value = '';
+  }
+};
+
+$('tombol-hapus-foto').onclick = async () => {
+  const p = produkFoto;
+  if (!p || !p.foto || !confirm(`Hapus foto ${p.nama}?`)) return;
+  tampilkanInfo($('info-foto'), 'Menghapus...');
+  const { error } = await db.rpc('atur_foto_produk', { p_produk_id: p.id, p_foto: null });
+  if (error) { tampilkanInfo($('info-foto'), 'Gagal: ' + error.message, 'gagal'); return; }
+  await db.storage.from('foto-menu').remove([p.foto]);
+  p.foto = null;
+  $('pratinjau-foto').src = gambarMenu(null, p.kategori ? p.kategori.nama : '');
+  $('tombol-hapus-foto').disabled = true;
+  tampilkanInfo($('info-foto'), 'Foto dihapus, sekarang pakai gambar bawaan.', 'sukses');
+  tampilkanProduk();
+};

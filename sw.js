@@ -3,7 +3,7 @@
 // kalau internet putus baru pakai salinan yang tersimpan.
 // Data pesanan/pembayaran (Supabase) TIDAK disimpan di sini — tetap butuh internet.
 
-const NAMA_CACHE = 'kasir-resto-v1';
+const NAMA_CACHE = 'kasir-resto-v2';
 const FILE_INTI = [
   './',
   'index.html',
@@ -13,6 +13,10 @@ const FILE_INTI = [
   'manifest.json',
   'ikon/ikon-192.png',
   'ikon/ikon-512.png',
+  'gambar/nasi.svg',
+  'gambar/mie.svg',
+  'gambar/minuman.svg',
+  'gambar/makanan.svg',
 ];
 
 self.addEventListener('install', (e) => {

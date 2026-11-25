@@ -29,6 +29,10 @@ h2 { font-size: 16px; margin: 18px 0 10px; }
 .kartu:hover { border-color: #C9D6FB; }
 .kartu.dipilih { border-color: #4672EC; }
 .kartu:disabled { opacity: .5; cursor: not-allowed; }
+.foto-menu { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 12px; margin-bottom: 10px; background: #F2F4FA; }
+.thumb { width: 44px; height: 44px; object-fit: cover; border-radius: 10px; display: block; background: #F2F4FA; }
+.pratinjau-foto { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 16px; display: block; background: #F2F4FA; margin: 8px 0 12px; }
+.tombol-file { display: flex; align-items: center; justify-content: center; }
 .nama { font-weight: 700; font-size: 14px; }
 .harga { color: #4672EC; font-weight: 800; margin-top: 6px; }
 .stok { color: #6B7591; font-size: 12px; margin-top: 4px; }

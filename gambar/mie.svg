@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
+  <rect width="400" height="300" fill="#FFF0E6"/>
+  <circle cx="70" cy="60" r="70" fill="#FFE1CC"/>
+  <rect x="240" y="40" width="10" height="170" rx="5" fill="#B9774A" transform="rotate(28 245 125)"/>
+  <rect x="262" y="40" width="10" height="170" rx="5" fill="#9C5F38" transform="rotate(34 267 125)"/>
+  <ellipse cx="200" cy="160" rx="135" ry="34" fill="#C2410C"/>
+  <path d="M65 160h270c0 70-60 112-135 112S65 230 65 160z" fill="#EA580C"/>
+  <path d="M90 196c40 16 180 16 220 0" stroke="#FDBA74" stroke-width="8" fill="none" stroke-linecap="round"/>
+  <ellipse cx="200" cy="158" rx="122" ry="26" fill="#F5C451"/>
+  <g fill="none" stroke="#E0A92E" stroke-width="5" stroke-linecap="round">
+    <path d="M100 160c15-12 30 12 45 0s30 12 45 0 30 12 45 0 30 12 45 0"/>
+    <path d="M115 150c15-10 30 10 45 0s30 10 45 0 30 10 45 0 30 10 40 0"/>
+    <path d="M125 170c15-8 30 8 45 0s30 8 45 0 30 8 45 0 20 8 30 0"/>
+  </g>
+  <circle cx="160" cy="150" r="12" fill="#fff"/><circle cx="160" cy="150" r="6" fill="#FDB833"/>
+  <g fill="#6BBF59"><ellipse cx="235" cy="148" rx="14" ry="6" transform="rotate(-20 235 148)"/><ellipse cx="255" cy="160" rx="12" ry="5" transform="rotate(25 255 160)"/></g>
+  <circle cx="205" cy="164" r="7" fill="#EF5B4C"/>
+</svg>

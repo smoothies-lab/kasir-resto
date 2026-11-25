@@ -105,6 +105,7 @@
             <table>
               <thead>
                 <tr>
+                  <th></th>
                   <th>Menu</th>
                   <th>Kategori</th>
                   <th class="angka-kanan">Harga jual</th>
@@ -396,6 +397,23 @@
       </div>
       <div class="info-jendela" id="info-stok"></div>
     </form>
+  </div>
+
+  <!-- ================= JENDELA FOTO MENU ================= -->
+  <div class="latar tersembunyi" id="jendela-foto">
+    <div class="jendela">
+      <h2>Foto menu</h2>
+      <p class="sub" id="sub-foto"></p>
+      <img class="pratinjau-foto" id="pratinjau-foto" alt="">
+      <p class="sub">Foto otomatis dikecilkan sebelum di-upload supaya hemat kuota. Kalau belum ada foto, dipakai gambar bawaan sesuai kategori.</p>
+      <input id="input-foto" type="file" accept="image/*" class="tersembunyi">
+      <label for="input-foto" class="tombol tombol-file" id="tombol-pilih-foto">Pilih / ambil foto</label>
+      <div class="dua-tombol">
+        <button type="button" class="tombol kedua" id="tombol-hapus-foto">Hapus foto</button>
+        <button type="button" class="tombol kedua" id="tutup-foto">Tutup</button>
+      </div>
+      <div class="info-jendela" id="info-foto"></div>
+    </div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
