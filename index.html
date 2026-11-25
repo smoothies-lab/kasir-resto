@@ -131,6 +131,13 @@
     .aksi { display: flex; gap: 6px; justify-content: flex-end; }
     .aksi button { border: 0; border-radius: 10px; padding: 8px 10px; font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; background: #E8EEFD; color: #2F57C9; }
 
+    /* Absen & staf */
+    .kanan-header { display: flex; gap: 8px; align-items: center; }
+    .tombol-absen { background: #fff; color: #2F57C9; border: 0; border-radius: 12px; padding: 10px 14px; font: inherit; font-weight: 800; cursor: pointer; }
+    .tombol-absen.pulang { background: #FFEDD5; color: #9A3412; }
+    .tombol-absen:disabled { opacity: .6; cursor: wait; }
+    .status-absen { font-size: 12px; opacity: .9; }
+
     @media (min-width: 800px) {
       #halaman-kasir { padding-bottom: 0; }
       .wadah { grid-template-columns: 1fr 340px; align-items: start; }
@@ -161,8 +168,12 @@
       <div>
         <h1>Kasir Resto</h1>
         <p id="info-staf"></p>
+        <p class="status-absen" id="status-absen"></p>
       </div>
-      <button class="tombol-keluar" id="tombol-keluar">Keluar</button>
+      <div class="kanan-header">
+        <button class="tombol-absen" id="tombol-absen">Absen masuk</button>
+        <button class="tombol-keluar" id="tombol-keluar">Keluar</button>
+      </div>
     </header>
 
     <nav class="tab">
@@ -170,6 +181,7 @@
       <button id="tab-openbill">Open bill</button>
       <button id="tab-produk" class="tersembunyi khusus-owner">Produk &amp; stok</button>
       <button id="tab-laporan" class="tersembunyi khusus-owner">Laporan</button>
+      <button id="tab-staf" class="tersembunyi khusus-owner">Staf</button>
     </nav>
 
     <!-- Pesanan baru -->
@@ -298,7 +310,71 @@
         </div>
       </div>
     </div>
+
+    <!-- Staf & absensi -->
+    <div id="tampilan-staf" class="tersembunyi">
+      <div class="laporan">
+        <div class="panel">
+          <div class="kepala-produk">
+            <h3>Daftar staf</h3>
+            <button class="tombol kecil" id="tombol-staf-baru">+ Tambah staf</button>
+          </div>
+          <p class="abu" style="font-size: 13px;">Akun login dibuat dulu di Supabase (Authentication → Users), lalu daftarkan emailnya di sini.</p>
+          <p id="pesan-staf" class="kosong"></p>
+          <div class="tabel-wadah">
+            <table>
+              <thead>
+                <tr><th>Nama</th><th>Email</th><th>Peran</th><th>Status</th><th></th></tr>
+              </thead>
+              <tbody id="isi-tabel-staf"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="kepala-produk">
+            <h3>Rekap absensi</h3>
+            <div class="periode" id="pilih-periode-absen">
+              <button data-periode="hari" class="aktif">Hari ini</button>
+              <button data-periode="7hari">7 hari terakhir</button>
+              <button data-periode="bulan">Bulan ini</button>
+            </div>
+          </div>
+          <p id="pesan-absensi" class="kosong"></p>
+          <div class="tabel-wadah">
+            <table>
+              <thead>
+                <tr><th>Tanggal</th><th>Nama</th><th>Masuk</th><th>Pulang</th><th class="angka-kanan">Lama kerja</th></tr>
+              </thead>
+              <tbody id="isi-tabel-absensi"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
   </section>
+
+  <!-- ================= JENDELA STAF ================= -->
+  <div class="latar tersembunyi" id="jendela-staf">
+    <form class="jendela" id="form-staf">
+      <h2 id="judul-staf">Tambah staf</h2>
+      <p class="sub">Email harus sama dengan akun yang sudah dibuat di Supabase.</p>
+      <label for="staf-email">Email</label>
+      <input id="staf-email" type="email" required>
+      <label for="staf-nama">Nama</label>
+      <input id="staf-nama" type="text" required placeholder="Misal: Rina">
+      <label for="staf-peran">Peran</label>
+      <select id="staf-peran">
+        <option value="kasir">Kasir</option>
+        <option value="owner">Owner</option>
+      </select>
+      <div class="info-jendela" id="info-staf-jendela"></div>
+      <div class="dua-tombol">
+        <button type="button" class="tombol kedua" id="batal-staf">Batal</button>
+        <button type="submit" class="tombol" id="simpan-staf">Simpan</button>
+      </div>
+    </form>
+  </div>
 
   <!-- ================= JENDELA BAYAR ================= -->
   <div class="latar tersembunyi" id="jendela-bayar">
@@ -384,7 +460,8 @@
     let daftarKategori = [];
     let produkDiubah = null;   // menu yang sedang diedit (null = menu baru)
     let produkStok = null;     // menu yang sedang diubah stoknya
-    const antrean = { menu: 0, openbill: 0, produk: 0, laporan: 0 }; // cegah tampilan dobel
+    const antrean = { menu: 0, openbill: 0, produk: 0, laporan: 0, staf: 0, absensi: 0 }; // cegah tampilan dobel
+    let periodeAbsen = 'hari';
 
     const rupiah = (n) => 'Rp' + Number(n || 0).toLocaleString('id-ID');
     const $ = (id) => document.getElementById(id);
@@ -453,11 +530,36 @@
       muatKategori();
       pindahTab('pesan'); // sudah memuat menu
       hitungOpenBill();
+      cekAbsen();
     }
+
+    // ================= ABSEN MASUK / PULANG =================
+    let sedangMasuk = false;
+    const jam = (t) => new Date(t).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+
+    async function cekAbsen() {
+      const { data } = await db.from('absensi').select('masuk_at')
+        .eq('staf_id', idPenggunaAktif).is('pulang_at', null).maybeSingle();
+      sedangMasuk = !!data;
+      $('tombol-absen').textContent = sedangMasuk ? 'Absen pulang' : 'Absen masuk';
+      $('tombol-absen').classList.toggle('pulang', sedangMasuk);
+      $('status-absen').textContent = sedangMasuk ? `Sudah absen masuk pukul ${jam(data.masuk_at)}` : 'Belum absen masuk';
+    }
+
+    $('tombol-absen').onclick = async () => {
+      const yakin = confirm(sedangMasuk ? 'Absen pulang sekarang?' : 'Absen masuk sekarang?');
+      if (!yakin) return;
+      $('tombol-absen').disabled = true;
+      const { error } = await db.rpc(sedangMasuk ? 'absen_pulang' : 'absen_masuk');
+      $('tombol-absen').disabled = false;
+      if (error) alert('Gagal absen: ' + error.message);
+      await cekAbsen();
+      if (!$('tampilan-staf').classList.contains('tersembunyi')) { tampilkanStaf(); tampilkanAbsensi(); }
+    };
 
     // ================= TAB =================
     function pindahTab(nama) {
-      ['pesan', 'openbill', 'produk', 'laporan'].forEach((t) => {
+      ['pesan', 'openbill', 'produk', 'laporan', 'staf'].forEach((t) => {
         $('tab-' + t).classList.toggle('aktif', t === nama);
         $('tampilan-' + t).classList.toggle('tersembunyi', t !== nama);
       });
@@ -465,8 +567,9 @@
       if (nama === 'openbill') tampilkanOpenBill();
       if (nama === 'produk') tampilkanProduk();
       if (nama === 'laporan') tampilkanLaporan();
+      if (nama === 'staf') { tampilkanStaf(); tampilkanAbsensi(); }
     }
-    ['pesan', 'openbill', 'produk', 'laporan'].forEach((t) => {
+    ['pesan', 'openbill', 'produk', 'laporan', 'staf'].forEach((t) => {
       $('tab-' + t).onclick = () => pindahTab(t);
     });
 
@@ -977,11 +1080,11 @@
       };
     });
 
-    function rentangTanggal() {
+    function rentangTanggal(periode = periodeLaporan) {
       const hariIni = new Date();
       let dari = new Date(hariIni);
-      if (periodeLaporan === '7hari') dari.setDate(hariIni.getDate() - 6);
-      if (periodeLaporan === 'bulan') dari = new Date(hariIni.getFullYear(), hariIni.getMonth(), 1);
+      if (periode === '7hari') dari.setDate(hariIni.getDate() - 6);
+      if (periode === 'bulan') dari = new Date(hariIni.getFullYear(), hariIni.getMonth(), 1);
       return { dari: tanggalLokal(dari), sampai: tanggalLokal(hariIni) };
     }
 
@@ -1042,6 +1145,98 @@
         batang.innerHTML = `<div style="height:${(nilai / tertinggi) * 100}%; opacity:${nilai ? 1 : 0.2}"></div><span>${jam}</span>`;
         $('r-jam').appendChild(batang);
       }
+    }
+
+    // ================= STAF =================
+    async function tampilkanStaf() {
+      const nomor = ++antrean.staf;
+      $('pesan-staf').textContent = 'Memuat staf...';
+      const { data, error } = await db.rpc('daftar_staf');
+      if (nomor !== antrean.staf) return;
+      if (error) { $('pesan-staf').textContent = 'Gagal memuat staf: ' + error.message; return; }
+      $('pesan-staf').textContent = '';
+      const isi = $('isi-tabel-staf');
+      isi.innerHTML = '';
+      data.forEach((s) => {
+        const tr = document.createElement('tr');
+        const diriSendiri = s.id === idPenggunaAktif;
+        tr.innerHTML = `
+          <td><b class="n"></b>${diriSendiri ? ' <span class="abu">(kamu)</span>' : ''}</td>
+          <td class="abu e"></td>
+          <td>${s.peran === 'owner' ? 'Owner' : 'Kasir'}</td>
+          <td><span class="lencana ${s.sedang_masuk ? 'hijau' : 'abu-abu'}">${s.sedang_masuk ? 'Sedang kerja' : 'Tidak di tempat'}</span></td>
+          <td><div class="aksi">${diriSendiri ? '' : '<button>Ubah</button>'}</div></td>`;
+        tr.querySelector('.n').textContent = s.nama;
+        tr.querySelector('.e').textContent = s.email;
+        const tombol = tr.querySelector('.aksi button');
+        if (tombol) tombol.onclick = () => bukaJendelaStaf(s);
+        isi.appendChild(tr);
+      });
+    }
+
+    function bukaJendelaStaf(s) {
+      $('judul-staf').textContent = s ? 'Ubah staf' : 'Tambah staf';
+      $('staf-email').value = s ? s.email : '';
+      $('staf-email').readOnly = !!s;
+      $('staf-nama').value = s ? s.nama : '';
+      $('staf-peran').value = s ? s.peran : 'kasir';
+      tampilkanInfo($('info-staf-jendela'), '');
+      $('jendela-staf').classList.remove('tersembunyi');
+    }
+    $('tombol-staf-baru').onclick = () => bukaJendelaStaf(null);
+    $('batal-staf').onclick = () => $('jendela-staf').classList.add('tersembunyi');
+
+    $('form-staf').onsubmit = async (e) => {
+      e.preventDefault();
+      $('simpan-staf').disabled = true;
+      tampilkanInfo($('info-staf-jendela'), 'Menyimpan...');
+      const { error } = await db.rpc('jadikan_staf', {
+        p_email: $('staf-email').value.trim(),
+        p_nama: $('staf-nama').value.trim(),
+        p_peran: $('staf-peran').value,
+      });
+      $('simpan-staf').disabled = false;
+      if (error) { tampilkanInfo($('info-staf-jendela'), error.message, 'gagal'); return; }
+      $('jendela-staf').classList.add('tersembunyi');
+      tampilkanStaf();
+    };
+
+    // ================= REKAP ABSENSI =================
+    document.querySelectorAll('#pilih-periode-absen button').forEach((b) => {
+      b.onclick = () => {
+        periodeAbsen = b.dataset.periode;
+        document.querySelectorAll('#pilih-periode-absen button').forEach((x) => x.classList.toggle('aktif', x === b));
+        tampilkanAbsensi();
+      };
+    });
+
+    function lamaKerja(menit) {
+      if (menit === null || menit === undefined) return '<span class="lencana hijau">Masih kerja</span>';
+      const j = Math.floor(menit / 60), m = menit % 60;
+      return j ? `${j} jam ${m} menit` : `${m} menit`;
+    }
+
+    async function tampilkanAbsensi() {
+      const nomor = ++antrean.absensi;
+      const { dari, sampai } = rentangTanggal(periodeAbsen);
+      $('pesan-absensi').textContent = 'Memuat absensi...';
+      const { data, error } = await db.rpc('rekap_absensi', { p_dari: dari, p_sampai: sampai });
+      if (nomor !== antrean.absensi) return;
+      if (error) { $('pesan-absensi').textContent = 'Gagal memuat absensi: ' + error.message; return; }
+      $('pesan-absensi').textContent = data.length ? '' : 'Belum ada yang absen di periode ini.';
+      const isi = $('isi-tabel-absensi');
+      isi.innerHTML = '';
+      data.forEach((a) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${new Date(a.masuk_at).toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric', month: 'short' })}</td>
+          <td><b class="n"></b></td>
+          <td>${jam(a.masuk_at)}</td>
+          <td>${a.pulang_at ? jam(a.pulang_at) : '–'}</td>
+          <td class="angka-kanan">${lamaKerja(a.menit)}</td>`;
+        tr.querySelector('.n').textContent = a.nama;
+        isi.appendChild(tr);
+      });
     }
   </script>
 </body>
