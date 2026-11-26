@@ -3,7 +3,7 @@
 // kalau internet putus baru pakai salinan yang tersimpan.
 // Data pesanan/pembayaran (Supabase) TIDAK disimpan di sini — tetap butuh internet.
 
-const NAMA_CACHE = 'kasir-resto-v3';
+const NAMA_CACHE = 'kasir-resto-v4';
 const FILE_INTI = [
   './',
   'index.html',
